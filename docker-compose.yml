@@ -1,0 +1,61 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: dev
+    container_name: app-backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgres://postgres:example@db:5432/postgres?sslmode=disable
+      - PORT=8080
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend:/app
+      # Cache Go modules to speed up repeated runs
+      - go-modules:/go/pkg/mod
+    command: ["go", "run", "."]
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: dev
+    container_name: app-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      # If your build.ts checks this to decide whether to watch or build
+      - NODE_ENV=development
+    volumes:
+      - ./frontend:/app
+      # CRITICAL: This anonymous volume keeps the container's linux node_modules
+      # separate from your local arch-linux node_modules
+      - /app/node_modules
+    # Check your package.json, typically "bun run dev" maps to "bun run --hot index.ts"
+    command: ["bun", "run", "dev"]
+
+  db:
+    image: postgres:15-alpine
+    container_name: app-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: example
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  db-data:
+  go-modules:
