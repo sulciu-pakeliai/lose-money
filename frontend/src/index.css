@@ -1,12 +1,24 @@
+@import url("https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
 @layer base {
   :root {
-    @apply text-[rgba(255,255,255,0.87)] bg-[#242424] font-sans;
+    @apply text-slate-100 bg-[#0b1020];
+    font-family: "Space Grotesk", "Segoe UI", sans-serif;
   }
 
   body {
-    @apply grid place-items-center min-w-[320px] min-h-screen relative m-0;
+    @apply min-h-screen m-0;
+  }
+
+  #root {
+    @apply min-h-screen;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: "Rajdhani", "Segoe UI", sans-serif;
   }
 }
 
@@ -14,31 +26,24 @@ body::before {
   content: "";
   position: fixed;
   inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(56, 189, 248, 0.25), transparent 45%),
+    radial-gradient(circle at 80% 15%, rgba(99, 102, 241, 0.25), transparent 40%),
+    radial-gradient(circle at 50% 90%, rgba(14, 116, 144, 0.25), transparent 55%),
+    #0b1020;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
   z-index: -1;
-  opacity: 0.05;
-  background: url("./logo.svg");
-  background-size: 256px;
-  transform: rotate(-12deg) scale(1.35);
-  animation: slide 30s linear infinite;
+  opacity: 0.15;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.1) 0.5px, transparent 0.5px);
+  background-size: 24px 24px;
+  mix-blend-mode: screen;
   pointer-events: none;
-}
-
-@keyframes slide {
-  from {
-    background-position: 0 0;
-  }
-  to {
-    background-position: 256px 224px;
-  }
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0);
-  }
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 @media (prefers-reduced-motion) {
@@ -46,5 +51,6 @@ body::before {
   ::before,
   ::after {
     animation: none !important;
+    transition-duration: 0ms !important;
   }
 }
