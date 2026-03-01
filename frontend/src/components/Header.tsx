@@ -1,13 +1,16 @@
 ﻿type HeaderProps = {
   balance: number;
   isLobby: boolean;
+  isHistory: boolean;
   onLobbyClick: () => void;
+  onHistoryClick: () => void;
+  onTopUpClick: () => void;
 };
 
 const formatBalance = (value: number) =>
   new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value);
 
-export function Header({ balance, isLobby, onLobbyClick }: HeaderProps) {
+export function Header({ balance, isLobby, isHistory, onLobbyClick, onHistoryClick, onTopUpClick }: HeaderProps) {
   return (
     <header className="flex flex-col gap-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -27,6 +30,13 @@ export function Header({ balance, isLobby, onLobbyClick }: HeaderProps) {
             Balance
             <span className="ml-3 font-display text-base text-white">₵ {formatBalance(balance)}</span>
           </div>
+          <button
+            onClick={onTopUpClick}
+            className="rounded-full border border-cyan-400/40 bg-cyan-400/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200 transition hover:bg-cyan-400/20"
+            type="button"
+          >
+            +
+          </button>
         </div>
       </div>
 
@@ -46,6 +56,20 @@ export function Header({ balance, isLobby, onLobbyClick }: HeaderProps) {
         >
           Lobby
         </button>
+
+        <button
+          onClick={onHistoryClick}
+          aria-current={isHistory ? "page" : undefined}
+          className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] transition duration-200 hover:scale-[1.03] hover:bg-white/20 active:scale-95 ${
+            isHistory
+              ? "bg-white/15 text-white shadow-[0_0_30px_rgba(56,189,248,0.25)]"
+              : "text-slate-200/70 hover:text-white"
+          }`}
+          type="button"
+        >
+          History
+        </button>
+
       </nav>
     </header>
   );

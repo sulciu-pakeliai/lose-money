@@ -1,4 +1,5 @@
 ﻿import { useState } from "react";
+import { recordBet } from "../lib/session";
 
 type CoinSide = "Heads" | "Tails";
 
@@ -40,8 +41,20 @@ export function CoinFlipGame({ balance, onBalanceChange }: CoinFlipGameProps) {
       setResult(next);
       setIsFlipping(false);
 
-      const nextBalance = next === choice ? balance + bet : balance - bet;
-      onBalanceChange(Math.max(0, nextBalance));
+      const won = next === choice;
+      const nextBalance = won ? balance + bet : balance - bet;
+      const clamped = Math.max(0, nextBalance);
+
+      onBalanceChange(clamped);
+
+      // Record to history
+      recordBet({
+        game: "Flipzilla",
+        result: next,
+        amount: bet,
+        outcome: won ? "win" : "loss",
+        balanceAfter: clamped,
+      });
     }, flipDurationMs);
   };
 

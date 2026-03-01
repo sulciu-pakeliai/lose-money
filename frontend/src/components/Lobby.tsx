@@ -1,4 +1,6 @@
-﻿type LobbyProps = {
+﻿import { BetHistory } from "./BetHistory";
+
+type LobbyProps = {
   onSelectCoinFlip: () => void;
 };
 
