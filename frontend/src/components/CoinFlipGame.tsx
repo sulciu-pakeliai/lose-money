@@ -1,11 +1,9 @@
-﻿import { useState } from "react";
-import { recordBet } from "../lib/session";
-
-type CoinSide = "Heads" | "Tails";
+import { useState } from "react";
+import type { CoinFlipResult, CoinSide } from "../lib/session";
 
 type CoinFlipGameProps = {
   balance: number;
-  onBalanceChange: (nextBalance: number) => void;
+  onFlip: (choice: CoinSide, amount: number) => Promise<CoinFlipResult>;
 };
 
 const betOptions = [1, 5, 10, 25, 50, 100];
@@ -13,12 +11,12 @@ const flipDurationMs = 2000;
 const minBet = 1;
 const maxBet = 10000;
 
-const randomSide = (): CoinSide => (Math.random() < 0.5 ? "Heads" : "Tails");
-
-export function CoinFlipGame({ balance, onBalanceChange }: CoinFlipGameProps) {
+export function CoinFlipGame({ balance, onFlip }: CoinFlipGameProps) {
   const [result, setResult] = useState<CoinSide | null>(null);
   const [pendingResult, setPendingResult] = useState<CoinSide | null>(null);
+  const [isRequesting, setIsRequesting] = useState(false);
   const [isFlipping, setIsFlipping] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [choice, setChoice] = useState<CoinSide>("Heads");
   const [bet, setBet] = useState<number>(10);
   const [customBet, setCustomBet] = useState<string>("10");
@@ -28,34 +26,32 @@ export function CoinFlipGame({ balance, onBalanceChange }: CoinFlipGameProps) {
     Number.isFinite(parsedCustomBet) && parsedCustomBet >= minBet && parsedCustomBet <= maxBet;
 
   const canAfford = bet <= balance;
-  const canFlip = !isFlipping && canAfford && bet > 0;
+  const isBusy = isRequesting || isFlipping;
+  const canFlip = !isBusy && canAfford && bet > 0;
 
-  const handleFlip = () => {
+  const handleFlip = async () => {
     if (!canFlip) return;
-    const next = randomSide();
-    setPendingResult(next);
+
+    setError(null);
+    setIsRequesting(true);
     setResult(null);
-    setIsFlipping(true);
+    setPendingResult(null);
 
-    window.setTimeout(() => {
+    try {
+      const response = await onFlip(choice, bet);
+      const next = response.bet.result;
+      setPendingResult(next);
+      setIsRequesting(false);
+      setIsFlipping(true);
+
+      await new Promise(resolve => window.setTimeout(resolve, flipDurationMs));
       setResult(next);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Unable to resolve flip");
+    } finally {
+      setIsRequesting(false);
       setIsFlipping(false);
-
-      const won = next === choice;
-      const nextBalance = won ? balance + bet : balance - bet;
-      const clamped = Math.max(0, nextBalance);
-
-      onBalanceChange(clamped);
-
-      // Record to history
-      recordBet({
-        game: "Flipzilla",
-        result: next,
-        amount: bet,
-        outcome: won ? "win" : "loss",
-        balanceAfter: clamped,
-      });
-    }, flipDurationMs);
+    }
   };
 
   const outcomeText = result
@@ -123,10 +119,11 @@ export function CoinFlipGame({ balance, onBalanceChange }: CoinFlipGameProps) {
                 key={side}
                 onClick={() => {
                   setChoice(side);
+                  setError(null);
                   setResult(null);
                   setPendingResult(null);
                 }}
-                disabled={isFlipping}
+                disabled={isBusy}
                 className={`rounded-2xl border px-4 py-3 text-sm font-semibold uppercase tracking-[0.2em] transition disabled:cursor-not-allowed disabled:opacity-50 ${
                   choice === side
                     ? "border-amber-400/60 bg-amber-400/10 text-amber-200"
@@ -148,10 +145,11 @@ export function CoinFlipGame({ balance, onBalanceChange }: CoinFlipGameProps) {
                 onClick={() => {
                   setBet(amount);
                   setCustomBet(String(amount));
+                  setError(null);
                   setResult(null);
                   setPendingResult(null);
                 }}
-                disabled={isFlipping || amount > balance}
+                disabled={isBusy || amount > balance}
                 className={`rounded-full border px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] transition disabled:cursor-not-allowed disabled:opacity-50 ${
                   bet === amount
                     ? "border-cyan-400/60 bg-cyan-400/10 text-cyan-200"
@@ -181,13 +179,14 @@ export function CoinFlipGame({ balance, onBalanceChange }: CoinFlipGameProps) {
                   const parsed = Number(value);
                   if (Number.isFinite(parsed) && parsed >= minBet && parsed <= maxBet) {
                     setBet(parsed);
+                    setError(null);
                     setResult(null);
                     setPendingResult(null);
                   }
                 }}
                 className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-400/60"
                 placeholder="Enter bet"
-                disabled={isFlipping}
+                disabled={isBusy}
               />
             </div>
             <button
@@ -195,10 +194,11 @@ export function CoinFlipGame({ balance, onBalanceChange }: CoinFlipGameProps) {
               onClick={() => {
                 if (!isCustomBetValid) return;
                 setBet(parsedCustomBet);
+                setError(null);
                 setResult(null);
                 setPendingResult(null);
               }}
-              disabled={isFlipping || !isCustomBetValid}
+              disabled={isBusy || !isCustomBetValid}
               className="rounded-full border border-cyan-400/40 bg-cyan-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200 transition disabled:cursor-not-allowed disabled:opacity-50"
             >
               Set bet
@@ -212,12 +212,14 @@ export function CoinFlipGame({ balance, onBalanceChange }: CoinFlipGameProps) {
           </div>
         )}
 
+        {error && <div className="text-xs uppercase tracking-[0.3em] text-rose-200">{error}</div>}
+
         <button
-          onClick={handleFlip}
+          onClick={() => void handleFlip()}
           className="rounded-full bg-cyan-500 px-6 py-3 text-xs font-semibold uppercase tracking-[0.22em] text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
           disabled={!canFlip}
         >
-          {isFlipping ? "Flipping..." : "Flip Coin"}
+          {isRequesting ? "Calling House..." : isFlipping ? "Flipping..." : "Flip Coin"}
         </button>
         <div className="text-xs uppercase tracking-[0.3em] text-slate-300/80">
           Current bet: ₵ {bet}

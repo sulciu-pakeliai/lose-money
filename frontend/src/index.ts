@@ -1,41 +1,33 @@
 import { serve } from "bun";
 import index from "./index.html";
 
+const backendOrigin = process.env.BACKEND_ORIGIN ?? "http://localhost:8080";
+
 const server = serve({
   routes: {
-    // Serve index.html for all unmatched routes.
+    "/api/*": async req => {
+      const incomingURL = new URL(req.url);
+      const targetURL = new URL(`${incomingURL.pathname}${incomingURL.search}`, backendOrigin);
+      try {
+        return await fetch(new Request(targetURL, req));
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Backend is unavailable";
+        return Response.json(
+          {
+            error: `Backend proxy failed for ${targetURL.pathname}: ${message}`,
+          },
+          { status: 502 },
+        );
+      }
+    },
+
     "/*": index,
-
-    "/api/hello": {
-      async GET(req) {
-        return Response.json({
-          message: "Hello, world!",
-          method: "GET",
-        });
-      },
-      async PUT(req) {
-        return Response.json({
-          message: "Hello, world!",
-          method: "PUT",
-        });
-      },
-    },
-
-    "/api/hello/:name": async req => {
-      const name = req.params.name;
-      return Response.json({
-        message: `Hello, ${name}!`,
-      });
-    },
   },
 
   development: process.env.NODE_ENV !== "production" && {
-    // Enable browser hot reloading in development
     hmr: true,
-
-    // Echo console logs from the browser to the server
     console: true,
   },
 });
 
-console.log(`🚀 Server running at ${server.url}`);
+console.log(`Frontend server running at ${server.url} -> proxying API to ${backendOrigin}`);

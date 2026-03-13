@@ -1,95 +1,88 @@
-﻿export type Session = {
+export type CoinSide = "Heads" | "Tails";
+
+export type Session = {
   id: string;
   balance: number;
   createdAt: string;
 };
 
-const STORAGE_KEY = "lm_session_v1";
-const START_BALANCE = 1000;
-
-const generateId = () => {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-
-  return `sess_${Math.random().toString(36).slice(2, 10)}_${Date.now().toString(36)}`;
-};
-
-export const getOrCreateSession = (): Session => {
-  if (typeof window === "undefined") {
-    return {
-      id: generateId(),
-      balance: START_BALANCE,
-      createdAt: new Date().toISOString(),
-    };
-  }
-
-  const stored = window.localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    try {
-      const parsed = JSON.parse(stored) as Session;
-      if (parsed.id && typeof parsed.balance === "number") {
-        return parsed;
-      }
-    } catch {
-      // fall through and recreate
-    }
-  }
-
-  const session = {
-    id: generateId(),
-    balance: START_BALANCE,
-    createdAt: new Date().toISOString(),
-  };
-
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
-  return session;
-};
-
-export const updateSessionBalance = (balance: number): Session => {
-  const session = getOrCreateSession();
-  const next = {
-    ...session,
-    balance: Math.max(0, balance),
-  };
-
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  }
-
-  return next;
-};
-
 export type BetRecord = {
   id: string;
   game: string;
-  result: string;
+  choice: CoinSide;
+  result: CoinSide;
   amount: number;
   outcome: "win" | "loss";
   balanceAfter: number;
   timestamp: string;
 };
 
-const HISTORY_KEY = "lm_history_v1";
+export type TopUpPolicy = {
+  allowedAmounts: number[];
+  cooldownSeconds: number;
+  availableAt?: string;
+};
 
-export const getBetHistory = (): BetRecord[] => {
-  if (typeof window === "undefined") return [];
-  try {
-    const stored = window.localStorage.getItem(HISTORY_KEY);
-    return stored ? (JSON.parse(stored) as BetRecord[]) : [];
-  } catch {
-    return [];
+export type AppState = {
+  session: Session;
+  history: BetRecord[];
+  topUp: TopUpPolicy;
+};
+
+export type CoinFlipResult = {
+  session: Session;
+  bet: BetRecord;
+  topUp: TopUpPolicy;
+};
+
+export type TopUpResult = {
+  session: Session;
+  creditedAmount: number;
+  topUp: TopUpPolicy;
+};
+
+type APIError = {
+  error?: string;
+};
+
+async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(path, {
+    credentials: "same-origin",
+    ...init,
+  });
+
+  const payload = (await response.json().catch(() => null)) as T | APIError | null;
+  if (!response.ok) {
+    const message =
+      payload && typeof payload === "object" && "error" in payload && typeof payload.error === "string"
+        ? payload.error
+        : `Request failed with status ${response.status}`;
+    throw new Error(message);
   }
-};
 
-export const recordBet = (bet: Omit<BetRecord, "id" | "timestamp">): BetRecord => {
-  const record: BetRecord = {
-    ...bet,
-    id: crypto.randomUUID(),
-    timestamp: new Date().toISOString(),
-  };
-  const history = getBetHistory();
-  history.unshift(record); // newest first
-  window.localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, 100))); // cap at 100
-  return record;
-};
+  return payload as T;
+}
+
+export async function fetchState(): Promise<AppState> {
+  return apiFetch<AppState>("/api/state");
+}
+
+export async function submitCoinFlip(choice: CoinSide, amount: number): Promise<CoinFlipResult> {
+  return apiFetch<CoinFlipResult>("/api/coinflip", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ choice, amount }),
+  });
+}
+
+export async function claimTopUp(amount: number): Promise<TopUpResult> {
+  return apiFetch<TopUpResult>("/api/top-up", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ amount }),
+  });
+}
