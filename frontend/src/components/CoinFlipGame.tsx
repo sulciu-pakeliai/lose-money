@@ -4,6 +4,7 @@ import type { CoinFlipResult, CoinSide } from "../lib/session";
 type CoinFlipGameProps = {
   balance: number;
   onFlip: (choice: CoinSide, amount: number) => Promise<CoinFlipResult>;
+  onOpenRules: () => void;
 };
 
 const betOptions = [1, 5, 10, 25, 50, 100];
@@ -11,7 +12,7 @@ const flipDurationMs = 2000;
 const minBet = 1;
 const maxBet = 10000;
 
-export function CoinFlipGame({ balance, onFlip }: CoinFlipGameProps) {
+export function CoinFlipGame({ balance, onFlip, onOpenRules }: CoinFlipGameProps) {
   const [result, setResult] = useState<CoinSide | null>(null);
   const [pendingResult, setPendingResult] = useState<CoinSide | null>(null);
   const [isRequesting, setIsRequesting] = useState(false);
@@ -75,7 +76,16 @@ export function CoinFlipGame({ balance, onFlip }: CoinFlipGameProps) {
 
   return (
     <section className="page-swap page-from-right w-full max-w-2xl rounded-3xl border border-white/10 bg-white/5 p-8 text-center">
-      <p className="text-xs uppercase tracking-[0.3em] text-slate-300/70">Flipzilla</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs uppercase tracking-[0.3em] text-slate-300/70">Flipzilla</p>
+        <button
+          onClick={onOpenRules}
+          className="arcade-button self-center rounded-full border border-white/10 bg-white/5 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-200 transition hover:border-white/20 hover:bg-white/10"
+          type="button"
+        >
+          Rules
+        </button>
+      </div>
 
       <div className="mt-8 flex flex-col items-center gap-6">
         <div className="coin-wrap">

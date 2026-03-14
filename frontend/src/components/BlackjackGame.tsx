@@ -7,6 +7,7 @@ type BlackjackGameProps = {
   onStart: (amount: number) => Promise<BlackjackActionResult>;
   onHit: () => Promise<BlackjackActionResult>;
   onStand: () => Promise<BlackjackActionResult>;
+  onOpenRules: () => void;
 };
 
 const betOptions = [10, 25, 50, 100, 250, 500];
@@ -66,7 +67,7 @@ function CardFace({ card, hidden = false }: { card?: BlackjackCard; hidden?: boo
   );
 }
 
-export function BlackjackGame({ balance, game, onStart, onHit, onStand }: BlackjackGameProps) {
+export function BlackjackGame({ balance, game, onStart, onHit, onStand, onOpenRules }: BlackjackGameProps) {
   const [bet, setBet] = useState<number>(25);
   const [customBet, setCustomBet] = useState("25");
   const [isBusy, setIsBusy] = useState(false);
@@ -162,9 +163,18 @@ export function BlackjackGame({ balance, game, onStart, onHit, onStand }: Blackj
               Server-dealt cards, real hit and stand flow, and dealer logic handled in Go.
             </p>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-black/20 px-5 py-4">
-            <p className="text-xs uppercase tracking-[0.28em] text-emerald-100/60">Active Wager</p>
-            <p className="mt-2 font-display text-3xl text-white">₵ {formatBalance(game?.betAmount ?? bet)}</p>
+          <div className="flex flex-col gap-3 sm:items-end">
+            <button
+              onClick={onOpenRules}
+              className="arcade-button rounded-full border border-white/10 bg-white/5 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-100 transition hover:border-white/20 hover:bg-white/10"
+              type="button"
+            >
+              Rules
+            </button>
+            <div className="rounded-2xl border border-white/10 bg-black/20 px-5 py-4">
+              <p className="text-xs uppercase tracking-[0.28em] text-emerald-100/60">Active Wager</p>
+              <p className="mt-2 font-display text-3xl text-white">₵ {formatBalance(game?.betAmount ?? bet)}</p>
+            </div>
           </div>
         </div>
 

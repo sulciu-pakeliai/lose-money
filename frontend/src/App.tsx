@@ -14,11 +14,13 @@ import {
   type CoinFlipResult,
   type TopUpResult,
 } from "./lib/session";
+import type { GameRuleKey } from "./lib/gameRules";
 import { Header } from "./components/Header";
 import { Lobby } from "./components/Lobby";
 import { CoinFlipGame } from "./components/CoinFlipGame";
 import { BlackjackGame } from "./components/BlackjackGame";
 import { BetHistory } from "./components/BetHistory";
+import { GameRulesModal } from "./components/GameRulesModal";
 import { TopUp } from "./components/TopUp";
 
 type View = "lobby" | "coinflip" | "blackjack" | "history" | "topup";
@@ -28,10 +30,28 @@ export function App() {
   const [state, setState] = useState<AppState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadingError, setLoadingError] = useState<string | null>(null);
+  const [activeRules, setActiveRules] = useState<GameRuleKey | null>(null);
 
   useEffect(() => {
     void loadState();
   }, []);
+
+  useEffect(() => {
+    if (view !== "coinflip" && view !== "blackjack") {
+      return;
+    }
+
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const storageKey = `lm_rules_seen_${view}_v1`;
+    if (window.localStorage.getItem(storageKey) === "1") {
+      return;
+    }
+
+    setActiveRules(view);
+  }, [view]);
 
   const loadState = async () => {
     setIsLoading(true);
@@ -115,6 +135,18 @@ export function App() {
     return next;
   };
 
+  const openRules = (game: GameRuleKey) => {
+    setActiveRules(game);
+  };
+
+  const closeRules = () => {
+    if (typeof window !== "undefined" && activeRules) {
+      window.localStorage.setItem(`lm_rules_seen_${activeRules}_v1`, "1");
+    }
+
+    setActiveRules(null);
+  };
+
   return (
     <div className="min-h-screen">
       <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-6 pb-14 pt-10">
@@ -156,7 +188,7 @@ export function App() {
             />
           )}
           {!isLoading && state && view === "coinflip" && (
-            <CoinFlipGame balance={state.session.balance} onFlip={handleCoinFlip} />
+            <CoinFlipGame balance={state.session.balance} onFlip={handleCoinFlip} onOpenRules={() => openRules("coinflip")} />
           )}
           {!isLoading && state && view === "blackjack" && (
             <BlackjackGame
@@ -165,6 +197,7 @@ export function App() {
               onStart={handleBlackjackStart}
               onHit={handleBlackjackHit}
               onStand={handleBlackjackStand}
+              onOpenRules={() => openRules("blackjack")}
             />
           )}
           {!isLoading && state && view === "history" && <BetHistory history={state.history} />}
@@ -173,6 +206,8 @@ export function App() {
           )}
         </main>
       </div>
+
+      {activeRules && <GameRulesModal game={activeRules} onClose={closeRules} />}
     </div>
   );
 }

@@ -262,6 +262,14 @@ input[type="number"] {
   gap: 0.75rem;
 }
 
+.rules-backdrop {
+  animation: rules-fade-in 220ms ease both;
+}
+
+.rules-modal {
+  animation: rules-modal-rise 280ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+
 .blackjack-card {
   position: relative;
   transform-origin: bottom center;
@@ -428,6 +436,28 @@ input[type="number"] {
   }
   100% {
     transform: scale(1);
+  }
+}
+
+@keyframes rules-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes rules-modal-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
   }
 }
 
