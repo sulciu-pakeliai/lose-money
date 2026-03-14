@@ -4,8 +4,12 @@ import "./index.css";
 import {
   claimTopUp,
   fetchState,
+  hitBlackjack,
+  standBlackjack,
+  startBlackjack,
   submitCoinFlip,
   type AppState,
+  type BlackjackActionResult,
   type CoinSide,
   type CoinFlipResult,
   type TopUpResult,
@@ -13,10 +17,11 @@ import {
 import { Header } from "./components/Header";
 import { Lobby } from "./components/Lobby";
 import { CoinFlipGame } from "./components/CoinFlipGame";
+import { BlackjackGame } from "./components/BlackjackGame";
 import { BetHistory } from "./components/BetHistory";
 import { TopUp } from "./components/TopUp";
 
-type View = "lobby" | "coinflip" | "history" | "topup";
+type View = "lobby" | "coinflip" | "blackjack" | "history" | "topup";
 
 export function App() {
   const [view, setView] = useState<View>("lobby");
@@ -45,6 +50,7 @@ export function App() {
     setState(current =>
       current
         ? {
+            ...current,
             session: next.session,
             history: [next.bet, ...current.history].slice(0, 100),
             topUp: next.topUp,
@@ -65,6 +71,20 @@ export function App() {
     );
   };
 
+  const applyBlackjack = (next: BlackjackActionResult) => {
+    setState(current =>
+      current
+        ? {
+            ...current,
+            session: next.session,
+            topUp: next.topUp,
+            blackjack: next.blackjack,
+            history: next.historyEntry ? [next.historyEntry, ...current.history].slice(0, 100) : current.history,
+          }
+        : current,
+    );
+  };
+
   const handleCoinFlip = async (choice: CoinSide, amount: number) => {
     const next = await submitCoinFlip(choice, amount);
     applyCoinFlip(next);
@@ -75,6 +95,24 @@ export function App() {
     const next = await claimTopUp(amount);
     applyTopUp(next);
     setView("lobby");
+  };
+
+  const handleBlackjackStart = async (amount: number) => {
+    const next = await startBlackjack(amount);
+    applyBlackjack(next);
+    return next;
+  };
+
+  const handleBlackjackHit = async () => {
+    const next = await hitBlackjack();
+    applyBlackjack(next);
+    return next;
+  };
+
+  const handleBlackjackStand = async () => {
+    const next = await standBlackjack();
+    applyBlackjack(next);
+    return next;
   };
 
   return (
@@ -111,9 +149,23 @@ export function App() {
             </section>
           )}
 
-          {!isLoading && state && view === "lobby" && <Lobby onSelectCoinFlip={() => setView("coinflip")} />}
+          {!isLoading && state && view === "lobby" && (
+            <Lobby
+              onSelectCoinFlip={() => setView("coinflip")}
+              onSelectBlackjack={() => setView("blackjack")}
+            />
+          )}
           {!isLoading && state && view === "coinflip" && (
             <CoinFlipGame balance={state.session.balance} onFlip={handleCoinFlip} />
+          )}
+          {!isLoading && state && view === "blackjack" && (
+            <BlackjackGame
+              balance={state.session.balance}
+              game={state.blackjack ?? null}
+              onStart={handleBlackjackStart}
+              onHit={handleBlackjackHit}
+              onStand={handleBlackjackStand}
+            />
           )}
           {!isLoading && state && view === "history" && <BetHistory history={state.history} />}
           {!isLoading && state && view === "topup" && (

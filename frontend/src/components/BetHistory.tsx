@@ -31,7 +31,11 @@ export function BetHistory({ history }: BetHistoryProps) {
                   <tr
                     key={record.id}
                     className={`border-t border-white/5 ${
-                      record.outcome === "win" ? "text-emerald-300" : "text-rose-300"
+                      record.outcome === "win"
+                        ? "text-emerald-300"
+                        : record.outcome === "push"
+                          ? "text-amber-200"
+                          : "text-rose-300"
                     }`}
                   >
                     <td className="py-2">{record.game}</td>

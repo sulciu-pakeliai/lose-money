@@ -9,6 +9,7 @@ Small full-stack project with:
 
 - Browser state is no longer authoritative for balance, game results, or bet history.
 - `backend` owns the session cookie, balance, coin flip resolution, and bet history.
+- `backend` also owns active blackjack hands, dealer logic, and blackjack settlement.
 - `frontend` now renders UI and calls `/api/*`.
 - The Bun frontend server proxies `/api/*` to the Go backend using `BACKEND_ORIGIN`.
 
@@ -58,6 +59,9 @@ DATABASE_URL=postgres://postgres:example@localhost:5432/postgres?sslmode=disable
 - `GET /api/state`
 - `POST /api/coinflip`
 - `POST /api/top-up`
+- `POST /api/blackjack/start`
+- `POST /api/blackjack/hit`
+- `POST /api/blackjack/stand`
 - `GET /api/health`
 
 ## Security Notes

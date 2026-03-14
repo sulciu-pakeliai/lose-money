@@ -124,7 +124,7 @@ export function CoinFlipGame({ balance, onFlip }: CoinFlipGameProps) {
                   setPendingResult(null);
                 }}
                 disabled={isBusy}
-                className={`rounded-2xl border px-4 py-3 text-sm font-semibold uppercase tracking-[0.2em] transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                className={`arcade-button rounded-2xl border px-4 py-3 text-sm font-semibold uppercase tracking-[0.2em] transition disabled:cursor-not-allowed disabled:opacity-50 ${
                   choice === side
                     ? "border-amber-400/60 bg-amber-400/10 text-amber-200"
                     : "border-white/10 bg-white/5 text-slate-200/70 hover:border-white/20"
@@ -150,7 +150,7 @@ export function CoinFlipGame({ balance, onFlip }: CoinFlipGameProps) {
                   setPendingResult(null);
                 }}
                 disabled={isBusy || amount > balance}
-                className={`rounded-full border px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                className={`arcade-button rounded-full border px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] transition disabled:cursor-not-allowed disabled:opacity-50 ${
                   bet === amount
                     ? "border-cyan-400/60 bg-cyan-400/10 text-cyan-200"
                     : "border-white/10 bg-white/5 text-slate-200/70 hover:border-white/20"
@@ -199,7 +199,7 @@ export function CoinFlipGame({ balance, onFlip }: CoinFlipGameProps) {
                 setPendingResult(null);
               }}
               disabled={isBusy || !isCustomBetValid}
-              className="rounded-full border border-cyan-400/40 bg-cyan-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200 transition disabled:cursor-not-allowed disabled:opacity-50"
+              className="arcade-button rounded-full border border-cyan-400/40 bg-cyan-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200 transition disabled:cursor-not-allowed disabled:opacity-50"
             >
               Set bet
             </button>
@@ -216,7 +216,7 @@ export function CoinFlipGame({ balance, onFlip }: CoinFlipGameProps) {
 
         <button
           onClick={() => void handleFlip()}
-          className="rounded-full bg-cyan-500 px-6 py-3 text-xs font-semibold uppercase tracking-[0.22em] text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
+          className="arcade-button rounded-full bg-cyan-500 px-6 py-3 text-xs font-semibold uppercase tracking-[0.22em] text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
           disabled={!canFlip}
         >
           {isRequesting ? "Calling House..." : isFlipping ? "Flipping..." : "Flip Coin"}

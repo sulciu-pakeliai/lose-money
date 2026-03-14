@@ -9,10 +9,10 @@ export type Session = {
 export type BetRecord = {
   id: string;
   game: string;
-  choice: CoinSide;
-  result: CoinSide;
+  choice: string;
+  result: string;
   amount: number;
-  outcome: "win" | "loss";
+  outcome: "win" | "loss" | "push";
   balanceAfter: number;
   timestamp: string;
 };
@@ -23,10 +23,32 @@ export type TopUpPolicy = {
   availableAt?: string;
 };
 
+export type BlackjackCard = {
+  rank: string;
+  suit: "spades" | "hearts" | "diamonds" | "clubs";
+};
+
+export type BlackjackGameState = {
+  id: string;
+  betAmount: number;
+  playerCards: BlackjackCard[];
+  dealerCards: BlackjackCard[];
+  dealerHiddenCount: number;
+  playerTotal: number;
+  dealerTotal: number;
+  status: string;
+  message: string;
+  canHit: boolean;
+  canStand: boolean;
+  isComplete: boolean;
+  completedAt?: string;
+};
+
 export type AppState = {
   session: Session;
   history: BetRecord[];
   topUp: TopUpPolicy;
+  blackjack?: BlackjackGameState | null;
 };
 
 export type CoinFlipResult = {
@@ -39,6 +61,13 @@ export type TopUpResult = {
   session: Session;
   creditedAmount: number;
   topUp: TopUpPolicy;
+};
+
+export type BlackjackActionResult = {
+  session: Session;
+  blackjack: BlackjackGameState;
+  topUp: TopUpPolicy;
+  historyEntry?: BetRecord;
 };
 
 type APIError = {
@@ -84,5 +113,27 @@ export async function claimTopUp(amount: number): Promise<TopUpResult> {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ amount }),
+  });
+}
+
+export async function startBlackjack(amount: number): Promise<BlackjackActionResult> {
+  return apiFetch<BlackjackActionResult>("/api/blackjack/start", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ amount }),
+  });
+}
+
+export async function hitBlackjack(): Promise<BlackjackActionResult> {
+  return apiFetch<BlackjackActionResult>("/api/blackjack/hit", {
+    method: "POST",
+  });
+}
+
+export async function standBlackjack(): Promise<BlackjackActionResult> {
+  return apiFetch<BlackjackActionResult>("/api/blackjack/stand", {
+    method: "POST",
   });
 }

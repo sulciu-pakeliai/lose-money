@@ -64,9 +64,10 @@ type topUpPolicy struct {
 }
 
 type stateResponse struct {
-	Session sessionDTO  `json:"session"`
-	History []betRecord `json:"history"`
-	TopUp   topUpPolicy `json:"topUp"`
+	Session   sessionDTO          `json:"session"`
+	History   []betRecord         `json:"history"`
+	TopUp     topUpPolicy         `json:"topUp"`
+	Blackjack *blackjackGameState `json:"blackjack,omitempty"`
 }
 
 type coinFlipRequest struct {
@@ -116,6 +117,9 @@ func main() {
 	mux.HandleFunc("GET /api/state", app.handleState)
 	mux.HandleFunc("POST /api/coinflip", app.handleCoinFlip)
 	mux.HandleFunc("POST /api/top-up", app.handleTopUp)
+	mux.HandleFunc("POST /api/blackjack/start", app.handleBlackjackStart)
+	mux.HandleFunc("POST /api/blackjack/hit", app.handleBlackjackHit)
+	mux.HandleFunc("POST /api/blackjack/stand", app.handleBlackjackStand)
 
 	server := &http.Server{
 		Addr:              ":" + port,
@@ -183,6 +187,23 @@ CREATE TABLE IF NOT EXISTS bets (
 
 CREATE INDEX IF NOT EXISTS bets_session_created_at_idx
     ON bets(session_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS blackjack_games (
+    id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+    bet_amount BIGINT NOT NULL,
+    deck JSONB NOT NULL,
+    player_cards JSONB NOT NULL,
+    dealer_cards JSONB NOT NULL,
+    status TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    completed_at TIMESTAMPTZ
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS blackjack_active_session_idx
+    ON blackjack_games(session_id)
+    WHERE status = 'active';
 `
 
 	_, err := db.Exec(ctx, schema)
@@ -206,10 +227,17 @@ func (a *application) handleState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	blackjack, err := a.loadActiveBlackjack(r.Context(), session.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load blackjack state")
+		return
+	}
+
 	writeJSON(w, http.StatusOK, stateResponse{
-		Session: toSessionDTO(session),
-		History: history,
-		TopUp:   buildTopUpPolicy(session.LastTopUpAt),
+		Session:   toSessionDTO(session),
+		History:   history,
+		TopUp:     buildTopUpPolicy(session.LastTopUpAt),
+		Blackjack: blackjack,
 	})
 }
 
