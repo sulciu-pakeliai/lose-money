@@ -151,7 +151,7 @@ export function App() {
     <div className="min-h-screen">
       <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-6 pb-14 pt-10">
         <Header
-          balance={state?.session.balance ?? 0}
+          session={state?.session ?? null}
           onLobbyClick={() => setView("lobby")}
           onHistoryClick={() => setView("history")}
           onTopUpClick={() => setView("topup")}

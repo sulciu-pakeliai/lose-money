@@ -3,6 +3,13 @@ export type CoinSide = "Heads" | "Tails";
 export type Session = {
   id: string;
   balance: number;
+  xp: number;
+  level: number;
+  gamesPlayed: number;
+  levelStartXp: number;
+  nextLevelXp: number;
+  xpIntoLevel: number;
+  xpForNextLevel: number;
   createdAt: string;
 };
 

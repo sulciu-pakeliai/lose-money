@@ -144,6 +144,8 @@ func (a *application) handleBlackjackStart(w http.ResponseWriter, r *http.Reques
 
 	var historyEntry *betRecord
 	finalBalance := balanceAfterBet
+	nextXP := lockedSession.XP
+	nextGamesPlayed := lockedSession.GamesPlayed
 
 	playerScore := scoreBlackjackHand(game.PlayerCards)
 	dealerScore := scoreBlackjackHand(game.DealerCards)
@@ -152,6 +154,8 @@ func (a *application) handleBlackjackStart(w http.ResponseWriter, r *http.Reques
 		game.Status = outcome.Status
 		game.CompletedAt = &now
 		finalBalance += outcome.Payout
+		nextXP += calculateXPReward("blackjack", game.BetAmount, outcome.Outcome, outcome.Status)
+		nextGamesPlayed++
 		historyEntry = buildBlackjackHistory(game, finalBalance, outcome)
 	}
 
@@ -160,7 +164,7 @@ func (a *application) handleBlackjackStart(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if err := a.updateSessionBalance(r.Context(), tx, lockedSession.ID, finalBalance, lockedSession.LastTopUpAt); err != nil {
+	if err := a.updateSessionBalance(r.Context(), tx, lockedSession.ID, finalBalance, nextXP, nextGamesPlayed, lockedSession.LastTopUpAt); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to reserve blackjack bet")
 		return
 	}
@@ -178,6 +182,8 @@ func (a *application) handleBlackjackStart(w http.ResponseWriter, r *http.Reques
 	}
 
 	lockedSession.Balance = finalBalance
+	lockedSession.XP = nextXP
+	lockedSession.GamesPlayed = nextGamesPlayed
 	writeJSON(w, http.StatusOK, blackjackActionResponse{
 		Session:      toSessionDTO(lockedSession),
 		Blackjack:    toBlackjackGameState(game),
@@ -295,7 +301,9 @@ func (a *application) finishBlackjackHand(
 	}
 
 	finalBalance := lockedSession.Balance + outcome.Payout
-	if err := a.updateSessionBalance(ctx, tx, lockedSession.ID, finalBalance, lockedSession.LastTopUpAt); err != nil {
+	nextXP := lockedSession.XP + calculateXPReward("blackjack", game.BetAmount, outcome.Outcome, outcome.Status)
+	nextGamesPlayed := lockedSession.GamesPlayed + 1
+	if err := a.updateSessionBalance(ctx, tx, lockedSession.ID, finalBalance, nextXP, nextGamesPlayed, lockedSession.LastTopUpAt); err != nil {
 		return nil, fmt.Errorf("failed to settle session balance: %w", err)
 	}
 
@@ -447,9 +455,9 @@ func (a *application) lockSession(ctx context.Context, tx pgx.Tx, sessionID stri
 	var session sessionRecord
 	err := tx.QueryRow(
 		ctx,
-		`SELECT id, balance, created_at, last_top_up_at FROM sessions WHERE id = $1 FOR UPDATE`,
+		`SELECT id, balance, xp, games_played, created_at, last_top_up_at FROM sessions WHERE id = $1 FOR UPDATE`,
 		sessionID,
-	).Scan(&session.ID, &session.Balance, &session.CreatedAt, &session.LastTopUpAt)
+	).Scan(&session.ID, &session.Balance, &session.XP, &session.GamesPlayed, &session.CreatedAt, &session.LastTopUpAt)
 	return session, err
 }
 
@@ -457,18 +465,34 @@ func (a *application) loadSessionTx(ctx context.Context, tx pgx.Tx, sessionID st
 	var session sessionRecord
 	err := tx.QueryRow(
 		ctx,
-		`SELECT id, balance, created_at, last_top_up_at FROM sessions WHERE id = $1`,
+		`SELECT id, balance, xp, games_played, created_at, last_top_up_at FROM sessions WHERE id = $1`,
 		sessionID,
-	).Scan(&session.ID, &session.Balance, &session.CreatedAt, &session.LastTopUpAt)
+	).Scan(&session.ID, &session.Balance, &session.XP, &session.GamesPlayed, &session.CreatedAt, &session.LastTopUpAt)
 	return session, err
 }
 
-func (a *application) updateSessionBalance(ctx context.Context, tx pgx.Tx, sessionID string, balance int64, lastTopUpAt *time.Time) error {
+func (a *application) updateSessionBalance(
+	ctx context.Context,
+	tx pgx.Tx,
+	sessionID string,
+	balance int64,
+	xp int64,
+	gamesPlayed int64,
+	lastTopUpAt *time.Time,
+) error {
 	_, err := tx.Exec(
 		ctx,
-		`UPDATE sessions SET balance = $2, updated_at = NOW(), last_top_up_at = $3 WHERE id = $1`,
+		`UPDATE sessions
+		 SET balance = $2,
+		     xp = $3,
+		     games_played = $4,
+		     updated_at = NOW(),
+		     last_top_up_at = $5
+		 WHERE id = $1`,
 		sessionID,
 		balance,
+		xp,
+		gamesPlayed,
 		lastTopUpAt,
 	)
 	return err

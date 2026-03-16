@@ -25,6 +25,8 @@ const (
 	maxBetAmount      = int64(10000)
 	topUpCooldown     = 30 * time.Second
 	historyLimit      = 20
+	baseXPPerLevel    = int64(100)
+	xpStepPerLevel    = int64(75)
 )
 
 var allowedTopUpAmounts = []int64{100, 250, 500}
@@ -36,14 +38,23 @@ type application struct {
 type sessionRecord struct {
 	ID          string
 	Balance     int64
+	XP          int64
+	GamesPlayed int64
 	CreatedAt   time.Time
 	LastTopUpAt *time.Time
 }
 
 type sessionDTO struct {
-	ID        string    `json:"id"`
-	Balance   int64     `json:"balance"`
-	CreatedAt time.Time `json:"createdAt"`
+	ID             string    `json:"id"`
+	Balance        int64     `json:"balance"`
+	XP             int64     `json:"xp"`
+	Level          int64     `json:"level"`
+	GamesPlayed    int64     `json:"gamesPlayed"`
+	LevelStartXP   int64     `json:"levelStartXp"`
+	NextLevelXP    int64     `json:"nextLevelXp"`
+	XPIntoLevel    int64     `json:"xpIntoLevel"`
+	XPForNextLevel int64     `json:"xpForNextLevel"`
+	CreatedAt      time.Time `json:"createdAt"`
 }
 
 type betRecord struct {
@@ -168,10 +179,15 @@ func ensureSchema(ctx context.Context, db *pgxpool.Pool) error {
 CREATE TABLE IF NOT EXISTS sessions (
     id TEXT PRIMARY KEY,
     balance BIGINT NOT NULL,
+    xp BIGINT NOT NULL DEFAULT 0,
+    games_played BIGINT NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     last_top_up_at TIMESTAMPTZ
 );
+
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS xp BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS games_played BIGINT NOT NULL DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS bets (
     id TEXT PRIMARY KEY,
@@ -277,9 +293,9 @@ func (a *application) handleCoinFlip(w http.ResponseWriter, r *http.Request) {
 	var locked sessionRecord
 	err = tx.QueryRow(
 		r.Context(),
-		`SELECT id, balance, created_at, last_top_up_at FROM sessions WHERE id = $1 FOR UPDATE`,
+		`SELECT id, balance, xp, games_played, created_at, last_top_up_at FROM sessions WHERE id = $1 FOR UPDATE`,
 		session.ID,
-	).Scan(&locked.ID, &locked.Balance, &locked.CreatedAt, &locked.LastTopUpAt)
+	).Scan(&locked.ID, &locked.Balance, &locked.XP, &locked.GamesPlayed, &locked.CreatedAt, &locked.LastTopUpAt)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to lock session")
 		return
@@ -315,11 +331,22 @@ func (a *application) handleCoinFlip(w http.ResponseWriter, r *http.Request) {
 		Timestamp:    time.Now().UTC(),
 	}
 
+	xpReward := calculateXPReward("coinflip", req.Amount, outcome, "")
+	nextXP := locked.XP + xpReward
+	nextGamesPlayed := locked.GamesPlayed + 1
+
 	if _, err := tx.Exec(
 		r.Context(),
-		`UPDATE sessions SET balance = $2, updated_at = NOW() WHERE id = $1`,
+		`UPDATE sessions
+		 SET balance = $2,
+		     xp = $3,
+		     games_played = $4,
+		     updated_at = NOW()
+		 WHERE id = $1`,
 		locked.ID,
 		nextBalance,
+		nextXP,
+		nextGamesPlayed,
 	); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to update balance")
 		return
@@ -349,6 +376,8 @@ func (a *application) handleCoinFlip(w http.ResponseWriter, r *http.Request) {
 	}
 
 	locked.Balance = nextBalance
+	locked.XP = nextXP
+	locked.GamesPlayed = nextGamesPlayed
 	writeJSON(w, http.StatusOK, coinFlipResponse{
 		Session: toSessionDTO(locked),
 		Bet:     bet,
@@ -384,9 +413,9 @@ func (a *application) handleTopUp(w http.ResponseWriter, r *http.Request) {
 	var locked sessionRecord
 	err = tx.QueryRow(
 		r.Context(),
-		`SELECT id, balance, created_at, last_top_up_at FROM sessions WHERE id = $1 FOR UPDATE`,
+		`SELECT id, balance, xp, games_played, created_at, last_top_up_at FROM sessions WHERE id = $1 FOR UPDATE`,
 		session.ID,
-	).Scan(&locked.ID, &locked.Balance, &locked.CreatedAt, &locked.LastTopUpAt)
+	).Scan(&locked.ID, &locked.Balance, &locked.XP, &locked.GamesPlayed, &locked.CreatedAt, &locked.LastTopUpAt)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to lock session")
 		return
@@ -438,16 +467,20 @@ func (a *application) ensureSession(w http.ResponseWriter, r *http.Request) (ses
 	}
 
 	session := sessionRecord{
-		ID:        mustRandomToken(24),
-		Balance:   startBalance,
-		CreatedAt: time.Now().UTC(),
+		ID:          mustRandomToken(24),
+		Balance:     startBalance,
+		XP:          0,
+		GamesPlayed: 0,
+		CreatedAt:   time.Now().UTC(),
 	}
 
 	if _, err := a.db.Exec(
 		r.Context(),
-		`INSERT INTO sessions (id, balance, created_at, updated_at) VALUES ($1, $2, $3, $3)`,
+		`INSERT INTO sessions (id, balance, xp, games_played, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $5)`,
 		session.ID,
 		session.Balance,
+		session.XP,
+		session.GamesPlayed,
 		session.CreatedAt,
 	); err != nil {
 		return sessionRecord{}, err
@@ -470,9 +503,9 @@ func (a *application) loadSession(ctx context.Context, sessionID string) (sessio
 	var session sessionRecord
 	err := a.db.QueryRow(
 		ctx,
-		`SELECT id, balance, created_at, last_top_up_at FROM sessions WHERE id = $1`,
+		`SELECT id, balance, xp, games_played, created_at, last_top_up_at FROM sessions WHERE id = $1`,
 		sessionID,
-	).Scan(&session.ID, &session.Balance, &session.CreatedAt, &session.LastTopUpAt)
+	).Scan(&session.ID, &session.Balance, &session.XP, &session.GamesPlayed, &session.CreatedAt, &session.LastTopUpAt)
 	return session, err
 }
 
@@ -533,11 +566,66 @@ func writeError(w http.ResponseWriter, status int, message string) {
 }
 
 func toSessionDTO(session sessionRecord) sessionDTO {
+	level := levelForXP(session.XP)
+	levelStartXP := xpRequiredForLevel(level)
+	nextLevelXP := xpRequiredForLevel(level + 1)
 	return sessionDTO{
-		ID:        session.ID,
-		Balance:   session.Balance,
-		CreatedAt: session.CreatedAt,
+		ID:             session.ID,
+		Balance:        session.Balance,
+		XP:             session.XP,
+		Level:          level,
+		GamesPlayed:    session.GamesPlayed,
+		LevelStartXP:   levelStartXP,
+		NextLevelXP:    nextLevelXP,
+		XPIntoLevel:    session.XP - levelStartXP,
+		XPForNextLevel: nextLevelXP - levelStartXP,
+		CreatedAt:      session.CreatedAt,
 	}
+}
+
+func xpRequiredForLevel(level int64) int64 {
+	if level <= 1 {
+		return 0
+	}
+
+	prev := level - 1
+	return prev*baseXPPerLevel + xpStepPerLevel*prev*(prev-1)/2
+}
+
+func levelForXP(xp int64) int64 {
+	level := int64(1)
+	for xp >= xpRequiredForLevel(level+1) {
+		level++
+	}
+	return level
+}
+
+func calculateXPReward(game string, amount int64, outcome string, status string) int64 {
+	base := int64(20)
+	volumeBonus := amount / 10
+	if volumeBonus > 80 {
+		volumeBonus = 80
+	}
+
+	outcomeBonus := int64(0)
+	switch outcome {
+	case "win":
+		outcomeBonus = 30
+	case "push":
+		outcomeBonus = 18
+	default:
+		outcomeBonus = 10
+	}
+
+	statusBonus := int64(0)
+	if game == "blackjack" {
+		statusBonus = 12
+		if status == "blackjack" {
+			statusBonus = 30
+		}
+	}
+
+	return base + volumeBonus + outcomeBonus + statusBonus
 }
 
 func randomSide() (string, error) {

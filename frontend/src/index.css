@@ -209,6 +209,22 @@ input[type="number"] {
   transform: none;
 }
 
+.level-panel {
+  position: relative;
+  background:
+    radial-gradient(circle at top left, rgba(251, 191, 36, 0.22), transparent 38%),
+    radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.16), transparent 42%),
+    linear-gradient(135deg, rgba(120, 53, 15, 0.3), rgba(15, 23, 42, 0.82));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 24px 60px rgba(15, 23, 42, 0.28);
+}
+
+.level-panel-fill {
+  background:
+    linear-gradient(90deg, rgba(251, 191, 36, 0.92), rgba(249, 115, 22, 0.92) 55%, rgba(34, 211, 238, 0.92));
+  box-shadow: 0 0 24px rgba(251, 191, 36, 0.35);
+  transition: width 220ms ease;
+}
+
 .blackjack-table {
   position: relative;
   overflow: hidden;
