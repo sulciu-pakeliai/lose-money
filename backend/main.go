@@ -40,6 +40,7 @@ type sessionRecord struct {
 	Balance     int64
 	XP          int64
 	GamesPlayed int64
+	UserID      *string
 	CreatedAt   time.Time
 	LastTopUpAt *time.Time
 }
@@ -125,6 +126,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/health", app.handleHealth)
+	mux.HandleFunc("POST /api/auth/register", app.handleRegister)
 	mux.HandleFunc("GET /api/state", app.handleState)
 	mux.HandleFunc("POST /api/coinflip", app.handleCoinFlip)
 	mux.HandleFunc("POST /api/top-up", app.handleTopUp)
@@ -220,6 +222,16 @@ CREATE TABLE IF NOT EXISTS blackjack_games (
 CREATE UNIQUE INDEX IF NOT EXISTS blackjack_active_session_idx
     ON blackjack_games(session_id)
     WHERE status = 'active';
+
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS user_id TEXT REFERENCES users(id);
+CREATE INDEX IF NOT EXISTS sessions_user_idx ON sessions(user_id);
+
+CREATE TABLE IF NOT EXISTS users (
+	id TEXT PRIMARY KEY,
+	email TEXT NOT NULL UNIQUE,
+	password_hash TEXT NOT NULL,
+	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 `
 
 	_, err := db.Exec(ctx, schema)
@@ -501,11 +513,18 @@ func (a *application) ensureSession(w http.ResponseWriter, r *http.Request) (ses
 
 func (a *application) loadSession(ctx context.Context, sessionID string) (sessionRecord, error) {
 	var session sessionRecord
+	var uid string
 	err := a.db.QueryRow(
 		ctx,
-		`SELECT id, balance, xp, games_played, created_at, last_top_up_at FROM sessions WHERE id = $1`,
+		`SELECT id, balance, xp, games_played, COALESCE(user_id,'') as user_id, created_at, last_top_up_at FROM sessions WHERE id = $1`,
 		sessionID,
-	).Scan(&session.ID, &session.Balance, &session.XP, &session.GamesPlayed, &session.CreatedAt, &session.LastTopUpAt)
+	).Scan(&session.ID, &session.Balance, &session.XP, &session.GamesPlayed, &uid, &session.CreatedAt, &session.LastTopUpAt)
+
+	if uid == "" {
+		session.UserID = nil
+	} else {
+		session.UserID = &uid
+	}
 	return session, err
 }
 
