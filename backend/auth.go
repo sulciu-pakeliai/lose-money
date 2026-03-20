@@ -250,3 +250,31 @@ func (a *application) handleLogin(w http.ResponseWriter, r *http.Request) {
 	})
 	writeJSON(w, http.StatusOK, map[string]any{"id": userID, "session": toSessionDTO(sess)})
 }
+
+func (a *application) handleLogout(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	newID := mustRandomToken(24)
+	now := time.Now().UTC()
+	if _, err := a.db.Exec(ctx, `INSERT INTO sessions (id, balance, xp, games_played, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$5)`, newID, startBalance, 0, 0, now); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to create session")
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     sessionCookieName,
+		Value:    newID,
+		Path:     "/",
+		MaxAge:   60 * 60 * 24 * 30,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   isSecureRequest(r),
+	})
+
+	if sess, err := a.loadSession(ctx, newID); err == nil {
+		writeJSON(w, http.StatusOK, map[string]any{"session": toSessionDTO(sess)})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"status": "ok"})
+}

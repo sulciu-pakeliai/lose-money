@@ -128,6 +128,7 @@ func main() {
 	mux.HandleFunc("GET /api/health", app.handleHealth)
 	mux.HandleFunc("POST /api/auth/register", app.handleRegister)
 	mux.HandleFunc("POST /api/auth/login", app.handleLogin)
+	mux.HandleFunc("POST /api/auth/logout", app.handleLogout)
 	mux.HandleFunc("GET /api/state", app.handleState)
 	mux.HandleFunc("POST /api/coinflip", app.handleCoinFlip)
 	mux.HandleFunc("POST /api/top-up", app.handleTopUp)
