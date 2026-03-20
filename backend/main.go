@@ -127,6 +127,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/health", app.handleHealth)
 	mux.HandleFunc("POST /api/auth/register", app.handleRegister)
+	mux.HandleFunc("POST /api/auth/login", app.handleLogin)
 	mux.HandleFunc("GET /api/state", app.handleState)
 	mux.HandleFunc("POST /api/coinflip", app.handleCoinFlip)
 	mux.HandleFunc("POST /api/top-up", app.handleTopUp)

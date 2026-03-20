@@ -3,10 +3,13 @@ package main
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
+	"github.com/jackc/pgx/v5"
 	"golang.org/x/crypto/argon2"
 )
 
@@ -93,6 +96,11 @@ type registerRequest struct {
 	Password string `json:"password"`
 }
 
+type loginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
 func (a *application) handleRegister(w http.ResponseWriter, r *http.Request) {
 	var req registerRequest
 	if err := decodeJSON(r, &req); err != nil {
@@ -149,4 +157,96 @@ func (a *application) handleRegister(w http.ResponseWriter, r *http.Request) {
 
 	// No guest session attached; create a fresh session for the user
 	writeJSON(w, http.StatusCreated, map[string]string{"id": id, "email": email})
+}
+
+func (a *application) handleLogin(w http.ResponseWriter, r *http.Request) {
+	var req loginRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	email := strings.TrimSpace(strings.ToLower(req.Email))
+	if email == "" {
+		writeError(w, http.StatusBadRequest, "invalid email")
+		return
+	}
+
+	ctx := r.Context()
+
+	var userID string
+	var pwHash string
+	if err := a.db.QueryRow(ctx, "SELECT id, password_hash FROM users WHERE email = $1", email).Scan(&userID, &pwHash); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			writeError(w, http.StatusUnauthorized, "invalid credentials")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "failed to lookup user")
+		return
+	}
+
+	ok, err := comparePasswordAndHash(req.Password, pwHash)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to verify password")
+		return
+	}
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "invalid credentials")
+		return
+	}
+
+	// 1) If user already has a session, use it
+	var existingSessionID string
+	if err := a.db.QueryRow(ctx, "SELECT id FROM sessions WHERE user_id = $1 ORDER BY updated_at DESC LIMIT 1", userID).Scan(&existingSessionID); err == nil {
+		sess, err := a.loadSession(ctx, existingSessionID)
+		if err == nil {
+			http.SetCookie(w, &http.Cookie{
+				Name:     sessionCookieName,
+				Value:    sess.ID,
+				Path:     "/",
+				MaxAge:   60 * 60 * 24 * 30,
+				HttpOnly: true,
+				SameSite: http.SameSiteLaxMode,
+				Secure:   isSecureRequest(r),
+			})
+			writeJSON(w, http.StatusOK, map[string]any{"id": userID, "session": toSessionDTO(sess)})
+			return
+		}
+	}
+
+	// 2) No existing session: if client has a guest session cookie and it's unclaimed, attach it
+	if cookie, err := r.Cookie(sessionCookieName); err == nil && cookie.Value != "" {
+		sess, err := a.loadSession(ctx, cookie.Value)
+		if err == nil && sess.UserID == nil {
+			if _, err := a.db.Exec(ctx, "UPDATE sessions SET user_id = $1, updated_at = NOW() WHERE id = $2 AND user_id IS NULL", userID, sess.ID); err == nil {
+				// reload
+				sess, _ = a.loadSession(ctx, sess.ID)
+				writeJSON(w, http.StatusOK, map[string]any{"id": userID, "session": toSessionDTO(sess)})
+				return
+			}
+		}
+	}
+
+	// 3) Create a fresh session for the user
+	newID := mustRandomToken(24)
+	now := time.Now().UTC()
+	if _, err := a.db.Exec(ctx, `INSERT INTO sessions (id, balance, xp, games_played, user_id, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$6)`, newID, startBalance, 0, 0, userID, now); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to create session")
+		return
+	}
+	sess, err := a.loadSession(ctx, newID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load session")
+		return
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     sessionCookieName,
+		Value:    sess.ID,
+		Path:     "/",
+		MaxAge:   60 * 60 * 24 * 30,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   isSecureRequest(r),
+	})
+	writeJSON(w, http.StatusOK, map[string]any{"id": userID, "session": toSessionDTO(sess)})
 }
