@@ -183,6 +183,13 @@ func openDatabase(ctx context.Context, databaseURL string) (*pgxpool.Pool, error
 
 func ensureSchema(ctx context.Context, db *pgxpool.Pool) error {
 	const schema = `
+CREATE TABLE IF NOT EXISTS users (
+	id TEXT PRIMARY KEY,
+	email TEXT NOT NULL UNIQUE,
+	password_hash TEXT NOT NULL,
+	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS sessions (
     id TEXT PRIMARY KEY,
     balance BIGINT NOT NULL,
@@ -230,13 +237,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS blackjack_active_session_idx
 
 ALTER TABLE sessions ADD COLUMN IF NOT EXISTS user_id TEXT REFERENCES users(id);
 CREATE INDEX IF NOT EXISTS sessions_user_idx ON sessions(user_id);
-
-CREATE TABLE IF NOT EXISTS users (
-	id TEXT PRIMARY KEY,
-	email TEXT NOT NULL UNIQUE,
-	password_hash TEXT NOT NULL,
-	created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
 `
 
 	_, err := db.Exec(ctx, schema)
