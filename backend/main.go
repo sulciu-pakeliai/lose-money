@@ -48,6 +48,7 @@ type sessionRecord struct {
 type sessionDTO struct {
 	ID             string    `json:"id"`
 	Balance        int64     `json:"balance"`
+	UserID         *string   `json:"userId,omitempty"`
 	XP             int64     `json:"xp"`
 	Level          int64     `json:"level"`
 	GamesPlayed    int64     `json:"gamesPlayed"`
@@ -593,6 +594,7 @@ func toSessionDTO(session sessionRecord) sessionDTO {
 	return sessionDTO{
 		ID:             session.ID,
 		Balance:        session.Balance,
+		UserID:         session.UserID,
 		XP:             session.XP,
 		Level:          level,
 		GamesPlayed:    session.GamesPlayed,
