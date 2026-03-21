@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import "./index.css";
 
 import {
+    authLogout,
     claimTopUp,
     fetchState,
     hitBlackjack,
@@ -14,6 +15,7 @@ import {
     type CoinFlipResult,
     type TopUpResult,
 } from "./lib/session";
+import { AuthModal } from "./components/AuthModal";
 import type { GameRuleKey } from "./lib/gameRules";
 import { Header } from "./components/Header";
 import { Lobby } from "./components/Lobby";
@@ -22,6 +24,8 @@ import { BlackjackGame } from "./components/BlackjackGame";
 import { BetHistory } from "./components/BetHistory";
 import { GameRulesModal } from "./components/GameRulesModal";
 import { TopUp } from "./components/TopUp";
+import { SignInModal } from "./components/SignInModal";
+import { SignUpModal } from "./components/SignUpModal";
 
 type View = "lobby" | "coinflip" | "blackjack" | "history" | "topup";
 
@@ -31,9 +35,24 @@ export function App() {
     const [isLoading, setIsLoading] = useState(true);
     const [loadingError, setLoadingError] = useState<string | null>(null);
     const [activeRules, setActiveRules] = useState<GameRuleKey | null>(null);
+    const [showAuthModal, setShowAuthModal] = useState(false);
+    const [authModalView, setAuthModalView] = useState<"choose" | "signin" | "signup">("choose");
+    const [showSignInModal, setShowSignInModal] = useState(false);
+    const [showSignUpModal, setShowSignUpModal] = useState(false);
 
     useEffect(() => {
-        void loadState();
+        if (typeof window === "undefined") {
+            void loadState();
+            return;
+        }
+
+        const seenAuth = window.localStorage.getItem("lm_auth_seen_v1") === "1";
+        if (seenAuth) {
+            void loadState();
+            return;
+        }
+
+        setShowAuthModal(true);
     }, []);
 
     useEffect(() => {
@@ -147,14 +166,53 @@ export function App() {
         setActiveRules(null);
     };
 
+    const continueAsGuest = async () => {
+        if (typeof window !== "undefined") {
+            window.localStorage.setItem("lm_auth_seen_v1", "1");
+        }
+        setShowAuthModal(false);
+        setAuthModalView("choose");
+        await loadState();
+    };
+
+    const handleAuthSuccess = async () => {
+        if (typeof window !== "undefined") {
+            window.localStorage.setItem("lm_auth_seen_v1", "1");
+        }
+        setShowAuthModal(false);
+        setShowSignInModal(false);
+        setShowSignUpModal(false);
+        setAuthModalView("choose");
+        await loadState();
+    };
+
+    const handleLogout = async () => {
+        try {
+            await authLogout();
+        } catch {
+            // Ignore API errors and still refresh state.
+        }
+        await loadState();
+    };
+
     return (
         <div className="min-h-screen">
             <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-6 pb-14 pt-10">
                 <Header
                     session={state?.session ?? null}
+                    showAuthActions={!isLoading}
                     onLobbyClick={() => setView("lobby")}
                     onHistoryClick={() => setView("history")}
                     onTopUpClick={() => setView("topup")}
+                    onSignInClick={() => {
+                        setShowSignInModal(true);
+                    }}
+                    onSignUpClick={() => {
+                        setShowSignUpModal(true);
+                    }}
+                    onLogoutClick={() => {
+                        void handleLogout();
+                    }}
                     isLobby={view === "lobby"}
                     isHistory={view === "history"}
                 />
@@ -208,6 +266,33 @@ export function App() {
             </div>
 
             {activeRules && <GameRulesModal game={activeRules} onClose={closeRules} />}
+            {showAuthModal && (
+                <AuthModal
+                    initialView={authModalView}
+                    onContinueAsGuest={() => {
+                        void continueAsGuest();
+                    }}
+                    onAuthSuccess={() => {
+                        void handleAuthSuccess();
+                    }}
+                />
+            )}
+            {showSignInModal && (
+                <SignInModal
+                    onBack={() => setShowSignInModal(false)}
+                    onSuccess={() => {
+                        void handleAuthSuccess();
+                    }}
+                />
+            )}
+            {showSignUpModal && (
+                <SignUpModal
+                    onBack={() => setShowSignUpModal(false)}
+                    onSuccess={() => {
+                        void handleAuthSuccess();
+                    }}
+                />
+            )}
         </div>
     );
 }

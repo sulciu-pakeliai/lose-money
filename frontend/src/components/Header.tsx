@@ -2,17 +2,21 @@ import type { Session } from "../lib/session";
 
 type HeaderProps = {
     session: Session | null;
+    showAuthActions: boolean;
     isLobby: boolean;
     isHistory: boolean;
     onLobbyClick: () => void;
     onHistoryClick: () => void;
     onTopUpClick: () => void;
+    onSignInClick: () => void;
+    onSignUpClick: () => void;
+    onLogoutClick: () => void;
 };
 
 const formatNumber = (value: number) =>
     new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value);
 
-export function Header({ session, isLobby, isHistory, onLobbyClick, onHistoryClick, onTopUpClick }: HeaderProps) {
+export function Header({ session, showAuthActions, isLobby, isHistory, onLobbyClick, onHistoryClick, onTopUpClick, onSignInClick, onSignUpClick, onLogoutClick }: HeaderProps) {
     const balance = session?.balance ?? 0;
     const level = session?.level ?? 1;
     const xp = session?.xp ?? 0;
@@ -20,6 +24,7 @@ export function Header({ session, isLobby, isHistory, onLobbyClick, onHistoryCli
     const xpForNextLevel = session?.xpForNextLevel ?? 1;
     const gamesPlayed = session?.gamesPlayed ?? 0;
     const progress = Math.min(100, Math.max(0, (xpIntoLevel / xpForNextLevel) * 100));
+    const accountName = session?.userEmail ? session.userEmail.split("@")[0] : null;
 
     return (
         <header className="flex flex-col gap-6">
@@ -53,7 +58,7 @@ export function Header({ session, isLobby, isHistory, onLobbyClick, onHistoryCli
                     </div>
 
                     <nav
-                        className="flex items-center gap-2 overflow-x-auto rounded-2xl border border-white/10 bg-white/5 px-3 py-2"
+                        className="mt-auto flex items-center gap-2 overflow-x-auto rounded-2xl border border-white/10 bg-white/5 px-3 py-2"
                         aria-label="Primary"
                     >
                         <button
@@ -96,6 +101,42 @@ export function Header({ session, isLobby, isHistory, onLobbyClick, onHistoryCli
                     </div>
 
                     <div className="mt-5">
+                        <div className="mb-4 flex items-center justify-between gap-3">
+                            {!showAuthActions ? (
+                                <div className="h-8" />
+                            ) : session?.userId ? (
+                                <>
+                                    <p className="truncate text-xs font-semibold uppercase tracking-[0.2em] text-amber-100/75">
+                                        {accountName ?? "Account"}
+                                    </p>
+                                    <button
+                                        onClick={onLogoutClick}
+                                        className="rounded-full border border-rose-400/50 bg-rose-500/20 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-rose-200 transition hover:bg-rose-500/30"
+                                        type="button"
+                                    >
+                                        Logout
+                                    </button>
+                                </>
+                            ) : (
+                                <div className="ml-auto flex gap-2">
+                                    <button
+                                        onClick={onSignUpClick}
+                                        className="rounded-full border border-amber-300/30 bg-amber-300/8 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-amber-200 transition hover:bg-amber-300/12"
+                                        type="button"
+                                    >
+                                        Sign up
+                                    </button>
+                                    <button
+                                        onClick={onSignInClick}
+                                        className="rounded-full border border-cyan-400/30 bg-cyan-400/8 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200 transition hover:bg-cyan-400/12"
+                                        type="button"
+                                    >
+                                        Sign in
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
                         <div className="flex items-center justify-between text-[11px] uppercase tracking-[0.24em] text-amber-50/70">
                             <span>{formatNumber(xpIntoLevel)} XP</span>
                             <span>{formatNumber(xpForNextLevel)} XP to next level</span>

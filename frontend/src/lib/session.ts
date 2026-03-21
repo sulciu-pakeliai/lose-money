@@ -3,6 +3,8 @@ export type CoinSide = "Heads" | "Tails";
 export type Session = {
     id: string;
     balance: number;
+    userId?: string | null;
+    userEmail?: string | null;
     xp: number;
     level: number;
     gamesPlayed: number;
@@ -17,7 +19,7 @@ export type BetRecord = {
     id: string;
     game: string;
     choice: string;
-    result: string;
+    result: CoinSide;
     amount: number;
     outcome: "win" | "loss" | "push";
     balanceAfter: number;
@@ -141,6 +143,32 @@ export async function hitBlackjack(): Promise<BlackjackActionResult> {
 
 export async function standBlackjack(): Promise<BlackjackActionResult> {
     return apiFetch<BlackjackActionResult>("/api/blackjack/stand", {
+        method: "POST",
+    });
+}
+
+export async function authLogin(email: string, password: string): Promise<{ id: string; session?: Session }> {
+    return apiFetch<{ id: string; session?: Session }>("/api/auth/login", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+    });
+}
+
+export async function authRegister(email: string, password: string): Promise<{ id: string; email: string; session?: Session }> {
+    return apiFetch<{ id: string; email: string; session?: Session }>("/api/auth/register", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+    });
+}
+
+export async function authLogout(): Promise<{ session?: Session; status?: string }> {
+    return apiFetch<{ session?: Session; status?: string }>("/api/auth/logout", {
         method: "POST",
     });
 }
