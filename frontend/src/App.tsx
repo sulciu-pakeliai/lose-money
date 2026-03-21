@@ -2,17 +2,17 @@ import { useEffect, useState } from "react";
 import "./index.css";
 
 import {
-  claimTopUp,
-  fetchState,
-  hitBlackjack,
-  standBlackjack,
-  startBlackjack,
-  submitCoinFlip,
-  type AppState,
-  type BlackjackActionResult,
-  type CoinSide,
-  type CoinFlipResult,
-  type TopUpResult,
+    claimTopUp,
+    fetchState,
+    hitBlackjack,
+    standBlackjack,
+    startBlackjack,
+    submitCoinFlip,
+    type AppState,
+    type BlackjackActionResult,
+    type CoinSide,
+    type CoinFlipResult,
+    type TopUpResult,
 } from "./lib/session";
 import type { GameRuleKey } from "./lib/gameRules";
 import { Header } from "./components/Header";
@@ -26,190 +26,190 @@ import { TopUp } from "./components/TopUp";
 type View = "lobby" | "coinflip" | "blackjack" | "history" | "topup";
 
 export function App() {
-  const [view, setView] = useState<View>("lobby");
-  const [state, setState] = useState<AppState | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadingError, setLoadingError] = useState<string | null>(null);
-  const [activeRules, setActiveRules] = useState<GameRuleKey | null>(null);
+    const [view, setView] = useState<View>("lobby");
+    const [state, setState] = useState<AppState | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [loadingError, setLoadingError] = useState<string | null>(null);
+    const [activeRules, setActiveRules] = useState<GameRuleKey | null>(null);
 
-  useEffect(() => {
-    void loadState();
-  }, []);
+    useEffect(() => {
+        void loadState();
+    }, []);
 
-  useEffect(() => {
-    if (view !== "coinflip" && view !== "blackjack") {
-      return;
-    }
+    useEffect(() => {
+        if (view !== "coinflip" && view !== "blackjack") {
+            return;
+        }
 
-    if (typeof window === "undefined") {
-      return;
-    }
+        if (typeof window === "undefined") {
+            return;
+        }
 
-    const storageKey = `lm_rules_seen_${view}_v1`;
-    if (window.localStorage.getItem(storageKey) === "1") {
-      return;
-    }
+        const storageKey = `lm_rules_seen_${view}_v1`;
+        if (window.localStorage.getItem(storageKey) === "1") {
+            return;
+        }
 
-    setActiveRules(view);
-  }, [view]);
+        setActiveRules(view);
+    }, [view]);
 
-  const loadState = async () => {
-    setIsLoading(true);
-    setLoadingError(null);
+    const loadState = async () => {
+        setIsLoading(true);
+        setLoadingError(null);
 
-    try {
-      setState(await fetchState());
-    } catch (error) {
-      setLoadingError(error instanceof Error ? error.message : "Failed to load game state");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        try {
+            setState(await fetchState());
+        } catch (error) {
+            setLoadingError(error instanceof Error ? error.message : "Failed to load game state");
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
-  const applyCoinFlip = (next: CoinFlipResult) => {
-    setState(current =>
-      current
-        ? {
-            ...current,
-            session: next.session,
-            history: [next.bet, ...current.history].slice(0, 100),
-            topUp: next.topUp,
-          }
-        : current,
+    const applyCoinFlip = (next: CoinFlipResult) => {
+        setState(current =>
+            current
+                ? {
+                    ...current,
+                    session: next.session,
+                    history: [next.bet, ...current.history].slice(0, 100),
+                    topUp: next.topUp,
+                }
+                : current,
+        );
+    };
+
+    const applyTopUp = (next: TopUpResult) => {
+        setState(current =>
+            current
+                ? {
+                    ...current,
+                    session: next.session,
+                    topUp: next.topUp,
+                }
+                : current,
+        );
+    };
+
+    const applyBlackjack = (next: BlackjackActionResult) => {
+        setState(current =>
+            current
+                ? {
+                    ...current,
+                    session: next.session,
+                    topUp: next.topUp,
+                    blackjack: next.blackjack,
+                    history: next.historyEntry ? [next.historyEntry, ...current.history].slice(0, 100) : current.history,
+                }
+                : current,
+        );
+    };
+
+    const handleCoinFlip = async (choice: CoinSide, amount: number) => {
+        const next = await submitCoinFlip(choice, amount);
+        applyCoinFlip(next);
+        return next;
+    };
+
+    const handleTopUp = async (amount: number) => {
+        const next = await claimTopUp(amount);
+        applyTopUp(next);
+        setView("lobby");
+    };
+
+    const handleBlackjackStart = async (amount: number) => {
+        const next = await startBlackjack(amount);
+        applyBlackjack(next);
+        return next;
+    };
+
+    const handleBlackjackHit = async () => {
+        const next = await hitBlackjack();
+        applyBlackjack(next);
+        return next;
+    };
+
+    const handleBlackjackStand = async () => {
+        const next = await standBlackjack();
+        applyBlackjack(next);
+        return next;
+    };
+
+    const openRules = (game: GameRuleKey) => {
+        setActiveRules(game);
+    };
+
+    const closeRules = () => {
+        if (typeof window !== "undefined" && activeRules) {
+            window.localStorage.setItem(`lm_rules_seen_${activeRules}_v1`, "1");
+        }
+
+        setActiveRules(null);
+    };
+
+    return (
+        <div className="min-h-screen">
+            <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-6 pb-14 pt-10">
+                <Header
+                    session={state?.session ?? null}
+                    onLobbyClick={() => setView("lobby")}
+                    onHistoryClick={() => setView("history")}
+                    onTopUpClick={() => setView("topup")}
+                    isLobby={view === "lobby"}
+                    isHistory={view === "history"}
+                />
+
+                <main className="flex flex-1 items-center justify-center py-12">
+                    {isLoading && (
+                        <section className="w-full max-w-md rounded-3xl border border-white/10 bg-white/5 p-8 text-center">
+                            <p className="text-xs uppercase tracking-[0.3em] text-slate-300/70">Loading table state</p>
+                            <p className="mt-4 text-sm text-slate-300/80">Syncing your server-side balance and history.</p>
+                        </section>
+                    )}
+
+                    {!isLoading && loadingError && !state && (
+                        <section className="w-full max-w-md rounded-3xl border border-rose-400/30 bg-rose-400/10 p-8 text-center">
+                            <p className="text-xs uppercase tracking-[0.3em] text-rose-200">Game state unavailable</p>
+                            <p className="mt-4 text-sm text-rose-100/80">{loadingError}</p>
+                            <button
+                                onClick={() => void loadState()}
+                                className="mt-6 rounded-full bg-white px-5 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-950 transition hover:bg-slate-100"
+                                type="button"
+                            >
+                                Retry
+                            </button>
+                        </section>
+                    )}
+
+                    {!isLoading && state && view === "lobby" && (
+                        <Lobby
+                            onSelectCoinFlip={() => setView("coinflip")}
+                            onSelectBlackjack={() => setView("blackjack")}
+                        />
+                    )}
+                    {!isLoading && state && view === "coinflip" && (
+                        <CoinFlipGame balance={state.session.balance} onFlip={handleCoinFlip} onOpenRules={() => openRules("coinflip")} />
+                    )}
+                    {!isLoading && state && view === "blackjack" && (
+                        <BlackjackGame
+                            balance={state.session.balance}
+                            game={state.blackjack ?? null}
+                            onStart={handleBlackjackStart}
+                            onHit={handleBlackjackHit}
+                            onStand={handleBlackjackStand}
+                            onOpenRules={() => openRules("blackjack")}
+                        />
+                    )}
+                    {!isLoading && state && view === "history" && <BetHistory history={state.history} />}
+                    {!isLoading && state && view === "topup" && (
+                        <TopUp policy={state.topUp} onConfirm={handleTopUp} onCancel={() => setView("lobby")} />
+                    )}
+                </main>
+            </div>
+
+            {activeRules && <GameRulesModal game={activeRules} onClose={closeRules} />}
+        </div>
     );
-  };
-
-  const applyTopUp = (next: TopUpResult) => {
-    setState(current =>
-      current
-        ? {
-            ...current,
-            session: next.session,
-            topUp: next.topUp,
-          }
-        : current,
-    );
-  };
-
-  const applyBlackjack = (next: BlackjackActionResult) => {
-    setState(current =>
-      current
-        ? {
-            ...current,
-            session: next.session,
-            topUp: next.topUp,
-            blackjack: next.blackjack,
-            history: next.historyEntry ? [next.historyEntry, ...current.history].slice(0, 100) : current.history,
-          }
-        : current,
-    );
-  };
-
-  const handleCoinFlip = async (choice: CoinSide, amount: number) => {
-    const next = await submitCoinFlip(choice, amount);
-    applyCoinFlip(next);
-    return next;
-  };
-
-  const handleTopUp = async (amount: number) => {
-    const next = await claimTopUp(amount);
-    applyTopUp(next);
-    setView("lobby");
-  };
-
-  const handleBlackjackStart = async (amount: number) => {
-    const next = await startBlackjack(amount);
-    applyBlackjack(next);
-    return next;
-  };
-
-  const handleBlackjackHit = async () => {
-    const next = await hitBlackjack();
-    applyBlackjack(next);
-    return next;
-  };
-
-  const handleBlackjackStand = async () => {
-    const next = await standBlackjack();
-    applyBlackjack(next);
-    return next;
-  };
-
-  const openRules = (game: GameRuleKey) => {
-    setActiveRules(game);
-  };
-
-  const closeRules = () => {
-    if (typeof window !== "undefined" && activeRules) {
-      window.localStorage.setItem(`lm_rules_seen_${activeRules}_v1`, "1");
-    }
-
-    setActiveRules(null);
-  };
-
-  return (
-    <div className="min-h-screen">
-      <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-6 pb-14 pt-10">
-        <Header
-          session={state?.session ?? null}
-          onLobbyClick={() => setView("lobby")}
-          onHistoryClick={() => setView("history")}
-          onTopUpClick={() => setView("topup")}
-          isLobby={view === "lobby"}
-          isHistory={view === "history"}
-        />
-
-        <main className="flex flex-1 items-center justify-center py-12">
-          {isLoading && (
-            <section className="w-full max-w-md rounded-3xl border border-white/10 bg-white/5 p-8 text-center">
-              <p className="text-xs uppercase tracking-[0.3em] text-slate-300/70">Loading table state</p>
-              <p className="mt-4 text-sm text-slate-300/80">Syncing your server-side balance and history.</p>
-            </section>
-          )}
-
-          {!isLoading && loadingError && !state && (
-            <section className="w-full max-w-md rounded-3xl border border-rose-400/30 bg-rose-400/10 p-8 text-center">
-              <p className="text-xs uppercase tracking-[0.3em] text-rose-200">Game state unavailable</p>
-              <p className="mt-4 text-sm text-rose-100/80">{loadingError}</p>
-              <button
-                onClick={() => void loadState()}
-                className="mt-6 rounded-full bg-white px-5 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-950 transition hover:bg-slate-100"
-                type="button"
-              >
-                Retry
-              </button>
-            </section>
-          )}
-
-          {!isLoading && state && view === "lobby" && (
-            <Lobby
-              onSelectCoinFlip={() => setView("coinflip")}
-              onSelectBlackjack={() => setView("blackjack")}
-            />
-          )}
-          {!isLoading && state && view === "coinflip" && (
-            <CoinFlipGame balance={state.session.balance} onFlip={handleCoinFlip} onOpenRules={() => openRules("coinflip")} />
-          )}
-          {!isLoading && state && view === "blackjack" && (
-            <BlackjackGame
-              balance={state.session.balance}
-              game={state.blackjack ?? null}
-              onStart={handleBlackjackStart}
-              onHit={handleBlackjackHit}
-              onStand={handleBlackjackStand}
-              onOpenRules={() => openRules("blackjack")}
-            />
-          )}
-          {!isLoading && state && view === "history" && <BetHistory history={state.history} />}
-          {!isLoading && state && view === "topup" && (
-            <TopUp policy={state.topUp} onConfirm={handleTopUp} onCancel={() => setView("lobby")} />
-          )}
-        </main>
-      </div>
-
-      {activeRules && <GameRulesModal game={activeRules} onClose={closeRules} />}
-    </div>
-  );
 }
 
 export default App;
