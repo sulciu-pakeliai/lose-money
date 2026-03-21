@@ -181,13 +181,16 @@ func (a *application) handleBlackjackStart(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	lockedSession.Balance = finalBalance
-	lockedSession.XP = nextXP
-	lockedSession.GamesPlayed = nextGamesPlayed
+	currentSession, err := a.loadSession(r.Context(), lockedSession.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to refresh session")
+		return
+	}
+
 	writeJSON(w, http.StatusOK, blackjackActionResponse{
-		Session:      toSessionDTO(lockedSession),
+		Session:      toSessionDTO(currentSession),
 		Blackjack:    toBlackjackGameState(game),
-		TopUp:        buildTopUpPolicy(lockedSession.LastTopUpAt),
+		TopUp:        buildTopUpPolicy(currentSession.LastTopUpAt),
 		HistoryEntry: historyEntry,
 	})
 }
@@ -260,14 +263,14 @@ func (a *application) handleBlackjackAction(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	currentSession, err := a.loadSessionTx(r.Context(), tx, session.ID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to refresh session")
+	if err := tx.Commit(r.Context()); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to commit blackjack action")
 		return
 	}
 
-	if err := tx.Commit(r.Context()); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to commit blackjack action")
+	currentSession, err := a.loadSession(r.Context(), session.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to refresh session")
 		return
 	}
 

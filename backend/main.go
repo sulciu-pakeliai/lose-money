@@ -41,6 +41,7 @@ type sessionRecord struct {
 	XP          int64
 	GamesPlayed int64
 	UserID      *string
+	UserEmail   *string
 	CreatedAt   time.Time
 	LastTopUpAt *time.Time
 }
@@ -49,6 +50,7 @@ type sessionDTO struct {
 	ID             string    `json:"id"`
 	Balance        int64     `json:"balance"`
 	UserID         *string   `json:"userId,omitempty"`
+	UserEmail      *string   `json:"userEmail,omitempty"`
 	XP             int64     `json:"xp"`
 	Level          int64     `json:"level"`
 	GamesPlayed    int64     `json:"gamesPlayed"`
@@ -390,13 +392,16 @@ func (a *application) handleCoinFlip(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	locked.Balance = nextBalance
-	locked.XP = nextXP
-	locked.GamesPlayed = nextGamesPlayed
+	currentSession, err := a.loadSession(r.Context(), locked.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to reload session")
+		return
+	}
+
 	writeJSON(w, http.StatusOK, coinFlipResponse{
-		Session: toSessionDTO(locked),
+		Session: toSessionDTO(currentSession),
 		Bet:     bet,
-		TopUp:   buildTopUpPolicy(locked.LastTopUpAt),
+		TopUp:   buildTopUpPolicy(currentSession.LastTopUpAt),
 	})
 }
 
@@ -461,12 +466,16 @@ func (a *application) handleTopUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	locked.Balance = nextBalance
-	locked.LastTopUpAt = &now
+	currentSession, err := a.loadSession(r.Context(), locked.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to reload session")
+		return
+	}
+
 	writeJSON(w, http.StatusOK, topUpResponse{
-		Session:        toSessionDTO(locked),
+		Session:        toSessionDTO(currentSession),
 		CreditedAmount: req.Amount,
-		TopUp:          buildTopUpPolicy(locked.LastTopUpAt),
+		TopUp:          buildTopUpPolicy(currentSession.LastTopUpAt),
 	})
 }
 
@@ -517,16 +526,26 @@ func (a *application) ensureSession(w http.ResponseWriter, r *http.Request) (ses
 func (a *application) loadSession(ctx context.Context, sessionID string) (sessionRecord, error) {
 	var session sessionRecord
 	var uid string
+	var userEmail string
 	err := a.db.QueryRow(
 		ctx,
-		`SELECT id, balance, xp, games_played, COALESCE(user_id,'') as user_id, created_at, last_top_up_at FROM sessions WHERE id = $1`,
+		`SELECT s.id, s.balance, s.xp, s.games_played, COALESCE(s.user_id,'') as user_id, COALESCE(u.email,'') as user_email, s.created_at, s.last_top_up_at
+		 FROM sessions s
+		 LEFT JOIN users u ON u.id = s.user_id
+		 WHERE s.id = $1`,
 		sessionID,
-	).Scan(&session.ID, &session.Balance, &session.XP, &session.GamesPlayed, &uid, &session.CreatedAt, &session.LastTopUpAt)
+	).Scan(&session.ID, &session.Balance, &session.XP, &session.GamesPlayed, &uid, &userEmail, &session.CreatedAt, &session.LastTopUpAt)
 
 	if uid == "" {
 		session.UserID = nil
 	} else {
 		session.UserID = &uid
+	}
+
+	if userEmail == "" {
+		session.UserEmail = nil
+	} else {
+		session.UserEmail = &userEmail
 	}
 	return session, err
 }
@@ -595,6 +614,7 @@ func toSessionDTO(session sessionRecord) sessionDTO {
 		ID:             session.ID,
 		Balance:        session.Balance,
 		UserID:         session.UserID,
+		UserEmail:      session.UserEmail,
 		XP:             session.XP,
 		Level:          level,
 		GamesPlayed:    session.GamesPlayed,
