@@ -4,6 +4,7 @@ import "./index.css";
 import {
     authLogout,
     claimTopUp,
+    claimMission,
     fetchState,
     hitBlackjack,
     standBlackjack,
@@ -13,12 +14,14 @@ import {
     type BlackjackActionResult,
     type CoinSide,
     type CoinFlipResult,
+    type MissionClaimResult,
     type TopUpResult,
 } from "./lib/session";
 import { AuthModal } from "./components/AuthModal";
 import type { GameRuleKey } from "./lib/gameRules";
 import { Header } from "./components/Header";
 import { Lobby } from "./components/Lobby";
+import { MissionsBoard } from "./components/MissionsBoard";
 import { CoinFlipGame } from "./components/CoinFlipGame";
 import { BlackjackGame } from "./components/BlackjackGame";
 import { BetHistory } from "./components/BetHistory";
@@ -27,7 +30,7 @@ import { TopUp } from "./components/TopUp";
 import { SignInModal } from "./components/SignInModal";
 import { SignUpModal } from "./components/SignUpModal";
 
-type View = "lobby" | "coinflip" | "blackjack" | "history" | "topup";
+type View = "lobby" | "missions" | "coinflip" | "blackjack" | "history" | "topup";
 
 export function App() {
     const [view, setView] = useState<View>("lobby");
@@ -39,6 +42,8 @@ export function App() {
     const [authModalView, setAuthModalView] = useState<"choose" | "signin" | "signup">("choose");
     const [showSignInModal, setShowSignInModal] = useState(false);
     const [showSignUpModal, setShowSignUpModal] = useState(false);
+
+    const claimableMissionCount = state?.missions.filter(mission => mission.status === "claimable").length ?? 0;
 
     useEffect(() => {
         if (typeof window === "undefined") {
@@ -93,6 +98,7 @@ export function App() {
                     session: next.session,
                     history: [next.bet, ...current.history].slice(0, 100),
                     topUp: next.topUp,
+                    missions: next.missions,
                 }
                 : current,
         );
@@ -105,6 +111,7 @@ export function App() {
                     ...current,
                     session: next.session,
                     topUp: next.topUp,
+                    missions: next.missions,
                 }
                 : current,
         );
@@ -117,8 +124,22 @@ export function App() {
                     ...current,
                     session: next.session,
                     topUp: next.topUp,
+                    missions: next.missions,
                     blackjack: next.blackjack,
                     history: next.historyEntry ? [next.historyEntry, ...current.history].slice(0, 100) : current.history,
+                }
+                : current,
+        );
+    };
+
+    const applyMissionClaim = (next: MissionClaimResult) => {
+        setState(current =>
+            current
+                ? {
+                    ...current,
+                    session: next.session,
+                    topUp: next.topUp,
+                    missions: next.missions,
                 }
                 : current,
         );
@@ -151,6 +172,12 @@ export function App() {
     const handleBlackjackStand = async () => {
         const next = await standBlackjack();
         applyBlackjack(next);
+        return next;
+    };
+
+    const handleMissionClaim = async (missionId: string) => {
+        const next = await claimMission(missionId);
+        applyMissionClaim(next);
         return next;
     };
 
@@ -202,6 +229,7 @@ export function App() {
                     session={state?.session ?? null}
                     showAuthActions={!isLoading}
                     onLobbyClick={() => setView("lobby")}
+                    onMissionsClick={() => setView("missions")}
                     onHistoryClick={() => setView("history")}
                     onTopUpClick={() => setView("topup")}
                     onSignInClick={() => {
@@ -214,7 +242,9 @@ export function App() {
                         void handleLogout();
                     }}
                     isLobby={view === "lobby"}
+                    isMissions={view === "missions"}
                     isHistory={view === "history"}
+                    claimableMissionCount={claimableMissionCount}
                 />
 
                 <main className="flex flex-1 items-center justify-center py-12">
@@ -243,7 +273,12 @@ export function App() {
                         <Lobby
                             onSelectCoinFlip={() => setView("coinflip")}
                             onSelectBlackjack={() => setView("blackjack")}
+                            onOpenMissions={() => setView("missions")}
+                            missions={state.missions}
                         />
+                    )}
+                    {!isLoading && state && view === "missions" && (
+                        <MissionsBoard missions={state.missions} onClaim={handleMissionClaim} />
                     )}
                     {!isLoading && state && view === "coinflip" && (
                         <CoinFlipGame balance={state.session.balance} onFlip={handleCoinFlip} onOpenRules={() => openRules("coinflip")} />

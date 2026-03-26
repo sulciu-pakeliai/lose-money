@@ -55,6 +55,7 @@ type blackjackActionResponse struct {
 	Session      sessionDTO          `json:"session"`
 	Blackjack    *blackjackGameState `json:"blackjack"`
 	TopUp        topUpPolicy         `json:"topUp"`
+	Missions     []missionDTO        `json:"missions"`
 	HistoryEntry *betRecord          `json:"historyEntry,omitempty"`
 }
 
@@ -174,6 +175,15 @@ func (a *application) handleBlackjackStart(w http.ResponseWriter, r *http.Reques
 			writeError(w, http.StatusInternalServerError, "failed to record blackjack result")
 			return
 		}
+
+		if err := a.applyMissionProgressTx(r.Context(), tx, lockedSession.ID, missionProgressEvent{
+			Game:    "blackjack",
+			Outcome: historyEntry.Outcome,
+			Amount:  game.BetAmount,
+		}); err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to update missions")
+			return
+		}
 	}
 
 	if err := tx.Commit(r.Context()); err != nil {
@@ -187,10 +197,17 @@ func (a *application) handleBlackjackStart(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	missions, err := a.loadDailyMissions(r.Context(), lockedSession.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to refresh missions")
+		return
+	}
+
 	writeJSON(w, http.StatusOK, blackjackActionResponse{
 		Session:      toSessionDTO(currentSession),
 		Blackjack:    toBlackjackGameState(game),
 		TopUp:        buildTopUpPolicy(currentSession.LastTopUpAt),
+		Missions:     missions,
 		HistoryEntry: historyEntry,
 	})
 }
@@ -274,10 +291,17 @@ func (a *application) handleBlackjackAction(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	missions, err := a.loadDailyMissions(r.Context(), session.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to refresh missions")
+		return
+	}
+
 	writeJSON(w, http.StatusOK, blackjackActionResponse{
 		Session:      toSessionDTO(currentSession),
 		Blackjack:    toBlackjackGameState(game),
 		TopUp:        buildTopUpPolicy(currentSession.LastTopUpAt),
+		Missions:     missions,
 		HistoryEntry: historyEntry,
 	})
 }
@@ -313,6 +337,14 @@ func (a *application) finishBlackjackHand(
 	historyEntry := buildBlackjackHistory(game, finalBalance, outcome)
 	if err := a.insertBetHistory(ctx, tx, session.ID, historyEntry); err != nil {
 		return nil, fmt.Errorf("failed to record blackjack history: %w", err)
+	}
+
+	if err := a.applyMissionProgressTx(ctx, tx, session.ID, missionProgressEvent{
+		Game:    "blackjack",
+		Outcome: outcome.Outcome,
+		Amount:  game.BetAmount,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to update missions: %w", err)
 	}
 
 	return historyEntry, nil

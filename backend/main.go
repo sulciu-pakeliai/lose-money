@@ -82,6 +82,7 @@ type stateResponse struct {
 	Session   sessionDTO          `json:"session"`
 	History   []betRecord         `json:"history"`
 	TopUp     topUpPolicy         `json:"topUp"`
+	Missions  []missionDTO        `json:"missions"`
 	Blackjack *blackjackGameState `json:"blackjack,omitempty"`
 }
 
@@ -91,9 +92,10 @@ type coinFlipRequest struct {
 }
 
 type coinFlipResponse struct {
-	Session sessionDTO  `json:"session"`
-	Bet     betRecord   `json:"bet"`
-	TopUp   topUpPolicy `json:"topUp"`
+	Session  sessionDTO   `json:"session"`
+	Bet      betRecord    `json:"bet"`
+	TopUp    topUpPolicy  `json:"topUp"`
+	Missions []missionDTO `json:"missions"`
 }
 
 type topUpRequest struct {
@@ -101,9 +103,10 @@ type topUpRequest struct {
 }
 
 type topUpResponse struct {
-	Session        sessionDTO  `json:"session"`
-	CreditedAmount int64       `json:"creditedAmount"`
-	TopUp          topUpPolicy `json:"topUp"`
+	Session        sessionDTO   `json:"session"`
+	CreditedAmount int64        `json:"creditedAmount"`
+	TopUp          topUpPolicy  `json:"topUp"`
+	Missions       []missionDTO `json:"missions"`
 }
 
 type errorResponse struct {
@@ -135,6 +138,7 @@ func main() {
 	mux.HandleFunc("GET /api/state", app.handleState)
 	mux.HandleFunc("POST /api/coinflip", app.handleCoinFlip)
 	mux.HandleFunc("POST /api/top-up", app.handleTopUp)
+	mux.HandleFunc("POST /api/missions/claim", app.handleMissionClaim)
 	mux.HandleFunc("POST /api/blackjack/start", app.handleBlackjackStart)
 	mux.HandleFunc("POST /api/blackjack/hit", app.handleBlackjackHit)
 	mux.HandleFunc("POST /api/blackjack/stand", app.handleBlackjackStand)
@@ -218,6 +222,34 @@ CREATE TABLE IF NOT EXISTS bets (
 CREATE INDEX IF NOT EXISTS bets_session_created_at_idx
     ON bets(session_id, created_at DESC);
 
+CREATE TABLE IF NOT EXISTS session_missions (
+    id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+    cycle_start TIMESTAMPTZ NOT NULL,
+    cycle_end TIMESTAMPTZ NOT NULL,
+    sort_order INTEGER NOT NULL,
+    template_key TEXT NOT NULL,
+    group_name TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    game_scope TEXT NOT NULL,
+    metric TEXT NOT NULL,
+    target BIGINT NOT NULL,
+    progress BIGINT NOT NULL DEFAULT 0,
+    reward_balance BIGINT NOT NULL DEFAULT 0,
+    reward_xp BIGINT NOT NULL DEFAULT 0,
+    completed_at TIMESTAMPTZ,
+    claimed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS session_missions_cycle_slot_idx
+    ON session_missions(session_id, cycle_start, sort_order);
+
+CREATE INDEX IF NOT EXISTS session_missions_session_cycle_idx
+    ON session_missions(session_id, cycle_start);
+
 CREATE TABLE IF NOT EXISTS blackjack_games (
     id TEXT PRIMARY KEY,
     session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
@@ -266,10 +298,17 @@ func (a *application) handleState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	missions, err := a.loadDailyMissions(r.Context(), session.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load missions")
+		return
+	}
+
 	writeJSON(w, http.StatusOK, stateResponse{
 		Session:   toSessionDTO(session),
 		History:   history,
 		TopUp:     buildTopUpPolicy(session.LastTopUpAt),
+		Missions:  missions,
 		Blackjack: blackjack,
 	})
 }
@@ -387,6 +426,15 @@ func (a *application) handleCoinFlip(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := a.applyMissionProgressTx(r.Context(), tx, locked.ID, missionProgressEvent{
+		Game:    "coinflip",
+		Outcome: outcome,
+		Amount:  req.Amount,
+	}); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to update missions")
+		return
+	}
+
 	if err := tx.Commit(r.Context()); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to commit bet")
 		return
@@ -398,10 +446,17 @@ func (a *application) handleCoinFlip(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	missions, err := a.loadDailyMissions(r.Context(), locked.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to reload missions")
+		return
+	}
+
 	writeJSON(w, http.StatusOK, coinFlipResponse{
-		Session: toSessionDTO(currentSession),
-		Bet:     bet,
-		TopUp:   buildTopUpPolicy(currentSession.LastTopUpAt),
+		Session:  toSessionDTO(currentSession),
+		Bet:      bet,
+		TopUp:    buildTopUpPolicy(currentSession.LastTopUpAt),
+		Missions: missions,
 	})
 }
 
@@ -472,10 +527,17 @@ func (a *application) handleTopUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	missions, err := a.loadDailyMissions(r.Context(), locked.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to reload missions")
+		return
+	}
+
 	writeJSON(w, http.StatusOK, topUpResponse{
 		Session:        toSessionDTO(currentSession),
 		CreditedAmount: req.Amount,
 		TopUp:          buildTopUpPolicy(currentSession.LastTopUpAt),
+		Missions:       missions,
 	})
 }
 

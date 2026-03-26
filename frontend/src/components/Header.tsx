@@ -4,8 +4,11 @@ type HeaderProps = {
     session: Session | null;
     showAuthActions: boolean;
     isLobby: boolean;
+    isMissions: boolean;
     isHistory: boolean;
+    claimableMissionCount: number;
     onLobbyClick: () => void;
+    onMissionsClick: () => void;
     onHistoryClick: () => void;
     onTopUpClick: () => void;
     onSignInClick: () => void;
@@ -16,7 +19,21 @@ type HeaderProps = {
 const formatNumber = (value: number) =>
     new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value);
 
-export function Header({ session, showAuthActions, isLobby, isHistory, onLobbyClick, onHistoryClick, onTopUpClick, onSignInClick, onSignUpClick, onLogoutClick }: HeaderProps) {
+export function Header({
+    session,
+    showAuthActions,
+    isLobby,
+    isMissions,
+    isHistory,
+    claimableMissionCount,
+    onLobbyClick,
+    onMissionsClick,
+    onHistoryClick,
+    onTopUpClick,
+    onSignInClick,
+    onSignUpClick,
+    onLogoutClick,
+}: HeaderProps) {
     const balance = session?.balance ?? 0;
     const level = session?.level ?? 1;
     const xp = session?.xp ?? 0;
@@ -71,6 +88,23 @@ export function Header({ session, showAuthActions, isLobby, isHistory, onLobbyCl
                             type="button"
                         >
                             Lobby
+                        </button>
+
+                        <button
+                            onClick={onMissionsClick}
+                            aria-current={isMissions ? "page" : undefined}
+                            className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] transition duration-200 hover:scale-[1.03] hover:bg-white/20 active:scale-95 ${isMissions
+                                    ? "bg-white/15 text-white shadow-[0_0_30px_rgba(56,189,248,0.25)]"
+                                    : "text-slate-200/70 hover:text-white"
+                                }`}
+                            type="button"
+                        >
+                            Missions
+                            {claimableMissionCount > 0 && (
+                                <span className="ml-2 rounded-full bg-amber-300 px-2 py-0.5 text-[10px] tracking-[0.12em] text-slate-950">
+                                    {claimableMissionCount}
+                                </span>
+                            )}
                         </button>
 
                         <button

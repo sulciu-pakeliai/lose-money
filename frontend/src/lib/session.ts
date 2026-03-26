@@ -53,10 +53,28 @@ export type BlackjackGameState = {
     completedAt?: string;
 };
 
+export type Mission = {
+    id: string;
+    templateKey: string;
+    groupName: string;
+    title: string;
+    description: string;
+    gameScope: "all" | "coinflip" | "blackjack";
+    target: number;
+    progress: number;
+    rewardBalance: number;
+    rewardXp: number;
+    status: "in_progress" | "claimable" | "claimed";
+    completedAt?: string;
+    claimedAt?: string;
+    resetsAt: string;
+};
+
 export type AppState = {
     session: Session;
     history: BetRecord[];
     topUp: TopUpPolicy;
+    missions: Mission[];
     blackjack?: BlackjackGameState | null;
 };
 
@@ -64,19 +82,31 @@ export type CoinFlipResult = {
     session: Session;
     bet: BetRecord;
     topUp: TopUpPolicy;
+    missions: Mission[];
 };
 
 export type TopUpResult = {
     session: Session;
     creditedAmount: number;
     topUp: TopUpPolicy;
+    missions: Mission[];
 };
 
 export type BlackjackActionResult = {
     session: Session;
     blackjack: BlackjackGameState;
     topUp: TopUpPolicy;
+    missions: Mission[];
     historyEntry?: BetRecord;
+};
+
+export type MissionClaimResult = {
+    session: Session;
+    topUp: TopUpPolicy;
+    missions: Mission[];
+    claimedMissionId: string;
+    rewardBalance: number;
+    rewardXp: number;
 };
 
 type APIError = {
@@ -170,5 +200,15 @@ export async function authRegister(email: string, password: string): Promise<{ i
 export async function authLogout(): Promise<{ session?: Session; status?: string }> {
     return apiFetch<{ session?: Session; status?: string }>("/api/auth/logout", {
         method: "POST",
+    });
+}
+
+export async function claimMission(missionId: string): Promise<MissionClaimResult> {
+    return apiFetch<MissionClaimResult>("/api/missions/claim", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ missionId }),
     });
 }
