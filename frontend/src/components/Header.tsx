@@ -7,6 +7,7 @@ type HeaderProps = {
     isMissions: boolean;
     isHistory: boolean;
     claimableMissionCount: number;
+    isProfile: boolean;
     onLobbyClick: () => void;
     onMissionsClick: () => void;
     onHistoryClick: () => void;
@@ -14,6 +15,7 @@ type HeaderProps = {
     onSignInClick: () => void;
     onSignUpClick: () => void;
     onLogoutClick: () => void;
+    onProfileClick: () => void;
 };
 
 const formatNumber = (value: number) =>
@@ -26,6 +28,7 @@ export function Header({
     isMissions,
     isHistory,
     claimableMissionCount,
+    isProfile,
     onLobbyClick,
     onMissionsClick,
     onHistoryClick,
@@ -33,6 +36,7 @@ export function Header({
     onSignInClick,
     onSignUpClick,
     onLogoutClick,
+    onProfileClick,
 }: HeaderProps) {
     const balance = session?.balance ?? 0;
     const level = session?.level ?? 1;
@@ -143,13 +147,22 @@ export function Header({
                                     <p className="truncate text-xs font-semibold uppercase tracking-[0.2em] text-amber-100/75">
                                         {accountName ?? "Account"}
                                     </p>
-                                    <button
-                                        onClick={onLogoutClick}
-                                        className="rounded-full border border-rose-400/50 bg-rose-500/20 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-rose-200 transition hover:bg-rose-500/30"
-                                        type="button"
-                                    >
-                                        Logout
-                                    </button>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={onProfileClick}
+                                            className="rounded-full border border-amber-300/30 bg-amber-300/8 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-amber-200 transition hover:bg-amber-300/12"
+                                            type="button"
+                                        >
+                                            Profile
+                                        </button>
+                                        <button
+                                            onClick={onLogoutClick}
+                                            className="rounded-full border border-rose-400/50 bg-rose-500/20 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-rose-200 transition hover:bg-rose-500/30"
+                                            type="button"
+                                        >
+                                            Logout
+                                        </button>
+                                    </div>
                                 </>
                             ) : (
                                 <div className="ml-auto flex gap-2">

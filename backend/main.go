@@ -109,6 +109,16 @@ type topUpResponse struct {
 	Missions       []missionDTO `json:"missions"`
 }
 
+type profileResponse struct {
+	Session      sessionDTO `json:"session"`
+	TotalBets    int64      `json:"totalBets"`
+	TotalWins    int64      `json:"totalWins"`
+	TotalLoss    int64      `json:"totalLoss"`
+	TotalPush    int64      `json:"totalPush"`
+	TotalWagered int64      `json:"totalWagered"`
+	BiggestWin   int64      `json:"biggestWin"`
+}
+
 type errorResponse struct {
 	Error string `json:"error"`
 }
@@ -142,6 +152,7 @@ func main() {
 	mux.HandleFunc("POST /api/blackjack/start", app.handleBlackjackStart)
 	mux.HandleFunc("POST /api/blackjack/hit", app.handleBlackjackHit)
 	mux.HandleFunc("POST /api/blackjack/stand", app.handleBlackjackStand)
+	mux.HandleFunc("GET /api/profile", app.handleProfile)
 
 	server := &http.Server{
 		Addr:              ":" + port,
@@ -647,6 +658,43 @@ func (a *application) loadHistory(ctx context.Context, sessionID string, limit i
 	}
 
 	return history, rows.Err()
+}
+
+func (a *application) handleProfile(w http.ResponseWriter, r *http.Request) {
+	session, err := a.ensureSession(w, r)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load session")
+		return
+	}
+
+	var stats profileResponse
+	err = a.db.QueryRow(
+		r.Context(),
+		`SELECT
+			COUNT(*)                                                AS total_bets,
+			COUNT(*) FILTER (WHERE outcome = 'win')                 AS total_wins,
+			COUNT(*) FILTER (WHERE outcome = 'loss')                AS total_losses,
+			COUNT(*) FILTER (WHERE outcome = 'push')                AS total_push,
+			COALESCE(SUM(amount), 0)                                AS total_wagered,
+			COALESCE(MAX(amount) FILTER (WHERE outcome = 'win'), 0) AS biggest_win
+		FROM bets
+		WHERE session_id = $1`,
+		session.ID,
+	).Scan(
+		&stats.TotalBets,
+		&stats.TotalWins,
+		&stats.TotalLoss,
+		&stats.TotalPush,
+		&stats.TotalWagered,
+		&stats.BiggestWin,
+	)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load profile stats")
+		return
+	}
+
+	stats.Session = toSessionDTO(session)
+	writeJSON(w, http.StatusOK, stats)
 }
 
 func decodeJSON(r *http.Request, dst any) error {

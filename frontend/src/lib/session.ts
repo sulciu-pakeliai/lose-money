@@ -109,6 +109,16 @@ export type MissionClaimResult = {
     rewardXp: number;
 };
 
+export type ProfileStats = {
+  session: Session;
+  totalBets: number;
+  totalWins: number;
+  totalLoss: number;
+  totalPush: number;
+  totalWagered: number;
+  biggestWin: number;
+};
+
 type APIError = {
     error?: string;
 };
@@ -211,4 +221,8 @@ export async function claimMission(missionId: string): Promise<MissionClaimResul
         },
         body: JSON.stringify({ missionId }),
     });
+}
+
+export async function fetchProfile(): Promise<ProfileStats> {
+  return apiFetch<ProfileStats>("/api/profile");
 }

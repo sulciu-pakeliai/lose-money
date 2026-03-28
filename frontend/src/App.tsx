@@ -29,8 +29,9 @@ import { GameRulesModal } from "./components/GameRulesModal";
 import { TopUp } from "./components/TopUp";
 import { SignInModal } from "./components/SignInModal";
 import { SignUpModal } from "./components/SignUpModal";
+import { Profile } from "./components/Profile";
 
-type View = "lobby" | "missions" | "coinflip" | "blackjack" | "history" | "topup";
+type View = "lobby" | "missions" | "coinflip" | "blackjack" | "history" | "topup" | "profile";
 
 export function App() {
     const [view, setView] = useState<View>("lobby");
@@ -245,6 +246,8 @@ export function App() {
                     isMissions={view === "missions"}
                     isHistory={view === "history"}
                     claimableMissionCount={claimableMissionCount}
+                    isProfile={view === "profile"}
+                    onProfileClick={() => setView("profile")}
                 />
 
                 <main className="flex flex-1 items-center justify-center py-12">
@@ -297,6 +300,7 @@ export function App() {
                     {!isLoading && state && view === "topup" && (
                         <TopUp policy={state.topUp} onConfirm={handleTopUp} onCancel={() => setView("lobby")} />
                     )}
+                    {!isLoading && state && view === "profile" && <Profile session={state.session} />}
                 </main>
             </div>
 
