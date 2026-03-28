@@ -74,12 +74,13 @@ type missionClaimRequest struct {
 }
 
 type missionClaimResponse struct {
-	Session          sessionDTO   `json:"session"`
-	TopUp            topUpPolicy  `json:"topUp"`
-	Missions         []missionDTO `json:"missions"`
-	ClaimedMissionID string       `json:"claimedMissionId"`
-	RewardBalance    int64        `json:"rewardBalance"`
-	RewardXP         int64        `json:"rewardXp"`
+	Session          sessionDTO        `json:"session"`
+	TopUp            topUpPolicy       `json:"topUp"`
+	Missions         []missionDTO      `json:"missions"`
+	Notifications    []notificationDTO `json:"notifications"`
+	ClaimedMissionID string            `json:"claimedMissionId"`
+	RewardBalance    int64             `json:"rewardBalance"`
+	RewardXP         int64             `json:"rewardXp"`
 }
 
 type missionProgressEvent struct {
@@ -271,6 +272,16 @@ func (a *application) handleMissionClaim(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	if err := a.sendNotificationTx(r.Context(), tx, session.ID, notificationInput{
+		Category: "notification",
+		Severity: "success",
+		Title:    "Mission reward claimed",
+		Message:  fmt.Sprintf("%s paid out %d credits and %d XP.", mission.Title, mission.RewardBalance, mission.RewardXP),
+	}); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to queue notification")
+		return
+	}
+
 	if err := tx.Commit(r.Context()); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to commit mission reward")
 		return
@@ -288,10 +299,17 @@ func (a *application) handleMissionClaim(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	notifications, err := a.loadNotifications(r.Context(), session.ID, notificationLimit)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to reload notifications")
+		return
+	}
+
 	writeJSON(w, http.StatusOK, missionClaimResponse{
 		Session:          toSessionDTO(currentSession),
 		TopUp:            buildTopUpPolicy(currentSession.LastTopUpAt),
 		Missions:         missions,
+		Notifications:    notifications,
 		ClaimedMissionID: mission.ID,
 		RewardBalance:    mission.RewardBalance,
 		RewardXP:         mission.RewardXP,

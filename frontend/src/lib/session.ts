@@ -70,11 +70,23 @@ export type Mission = {
     resetsAt: string;
 };
 
+export type AppNotification = {
+    id: string;
+    category: "notification" | "news";
+    severity: "info" | "success" | "warning";
+    title: string;
+    message: string;
+    isRead: boolean;
+    createdAt: string;
+    readAt?: string;
+};
+
 export type AppState = {
     session: Session;
     history: BetRecord[];
     topUp: TopUpPolicy;
     missions: Mission[];
+    notifications: AppNotification[];
     blackjack?: BlackjackGameState | null;
 };
 
@@ -83,6 +95,7 @@ export type CoinFlipResult = {
     bet: BetRecord;
     topUp: TopUpPolicy;
     missions: Mission[];
+    notifications: AppNotification[];
 };
 
 export type TopUpResult = {
@@ -90,6 +103,7 @@ export type TopUpResult = {
     creditedAmount: number;
     topUp: TopUpPolicy;
     missions: Mission[];
+    notifications: AppNotification[];
 };
 
 export type BlackjackActionResult = {
@@ -97,6 +111,7 @@ export type BlackjackActionResult = {
     blackjack: BlackjackGameState;
     topUp: TopUpPolicy;
     missions: Mission[];
+    notifications: AppNotification[];
     historyEntry?: BetRecord;
 };
 
@@ -104,6 +119,7 @@ export type MissionClaimResult = {
     session: Session;
     topUp: TopUpPolicy;
     missions: Mission[];
+    notifications: AppNotification[];
     claimedMissionId: string;
     rewardBalance: number;
     rewardXp: number;
@@ -225,4 +241,14 @@ export async function claimMission(missionId: string): Promise<MissionClaimResul
 
 export async function fetchProfile(): Promise<ProfileStats> {
   return apiFetch<ProfileStats>("/api/profile");
+}
+
+export async function fetchNotifications(): Promise<{ notifications: AppNotification[] }> {
+    return apiFetch<{ notifications: AppNotification[] }>("/api/notifications");
+}
+
+export async function markNotificationsRead(): Promise<{ notifications: AppNotification[] }> {
+    return apiFetch<{ notifications: AppNotification[] }>("/api/notifications/read", {
+        method: "POST",
+    });
 }

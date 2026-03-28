@@ -6,11 +6,14 @@ type HeaderProps = {
     isLobby: boolean;
     isMissions: boolean;
     isHistory: boolean;
+    isNotifications: boolean;
     claimableMissionCount: number;
+    unreadNotificationCount: number;
     isProfile: boolean;
     onLobbyClick: () => void;
     onMissionsClick: () => void;
     onHistoryClick: () => void;
+    onNotificationsClick: () => void;
     onTopUpClick: () => void;
     onSignInClick: () => void;
     onSignUpClick: () => void;
@@ -27,11 +30,14 @@ export function Header({
     isLobby,
     isMissions,
     isHistory,
+    isNotifications,
     claimableMissionCount,
+    unreadNotificationCount,
     isProfile,
     onLobbyClick,
     onMissionsClick,
     onHistoryClick,
+    onNotificationsClick,
     onTopUpClick,
     onSignInClick,
     onSignUpClick,
@@ -121,6 +127,23 @@ export function Header({
                             type="button"
                         >
                             History
+                        </button>
+
+                        <button
+                            onClick={onNotificationsClick}
+                            aria-current={isNotifications ? "page" : undefined}
+                            className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] transition duration-200 hover:scale-[1.03] hover:bg-white/20 active:scale-95 ${isNotifications
+                                    ? "bg-white/15 text-white shadow-[0_0_30px_rgba(56,189,248,0.25)]"
+                                    : "text-slate-200/70 hover:text-white"
+                                }`}
+                            type="button"
+                        >
+                            Notifications
+                            {unreadNotificationCount > 0 && (
+                                <span className="ml-2 rounded-full bg-cyan-300 px-2 py-0.5 text-[10px] tracking-[0.12em] text-slate-950">
+                                    {unreadNotificationCount}
+                                </span>
+                            )}
                         </button>
                     </nav>
                 </div>

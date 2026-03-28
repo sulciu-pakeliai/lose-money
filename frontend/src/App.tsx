@@ -7,6 +7,7 @@ import {
     claimMission,
     fetchState,
     hitBlackjack,
+    markNotificationsRead,
     standBlackjack,
     startBlackjack,
     submitCoinFlip,
@@ -30,8 +31,9 @@ import { TopUp } from "./components/TopUp";
 import { SignInModal } from "./components/SignInModal";
 import { SignUpModal } from "./components/SignUpModal";
 import { Profile } from "./components/Profile";
+import { NotificationsCenter } from "./components/NotificationsCenter";
 
-type View = "lobby" | "missions" | "coinflip" | "blackjack" | "history" | "topup" | "profile";
+type View = "lobby" | "missions" | "coinflip" | "blackjack" | "history" | "topup" | "profile" | "notifications";
 
 export function App() {
     const [view, setView] = useState<View>("lobby");
@@ -45,6 +47,7 @@ export function App() {
     const [showSignUpModal, setShowSignUpModal] = useState(false);
 
     const claimableMissionCount = state?.missions.filter(mission => mission.status === "claimable").length ?? 0;
+    const unreadNotificationCount = state?.notifications.filter(notification => !notification.isRead).length ?? 0;
 
     useEffect(() => {
         if (typeof window === "undefined") {
@@ -78,6 +81,27 @@ export function App() {
         setActiveRules(view);
     }, [view]);
 
+    useEffect(() => {
+        if (view !== "notifications" || unreadNotificationCount === 0) {
+            return;
+        }
+
+        markNotificationsRead()
+            .then(result => {
+                setState(current =>
+                    current
+                        ? {
+                            ...current,
+                            notifications: result.notifications,
+                        }
+                        : current,
+                );
+            })
+            .catch(() => {
+                // Keep the current local state if the read sync fails.
+            });
+    }, [unreadNotificationCount, view]);
+
     const loadState = async () => {
         setIsLoading(true);
         setLoadingError(null);
@@ -100,6 +124,7 @@ export function App() {
                     history: [next.bet, ...current.history].slice(0, 100),
                     topUp: next.topUp,
                     missions: next.missions,
+                    notifications: next.notifications,
                 }
                 : current,
         );
@@ -113,6 +138,7 @@ export function App() {
                     session: next.session,
                     topUp: next.topUp,
                     missions: next.missions,
+                    notifications: next.notifications,
                 }
                 : current,
         );
@@ -127,6 +153,7 @@ export function App() {
                     topUp: next.topUp,
                     missions: next.missions,
                     blackjack: next.blackjack,
+                    notifications: next.notifications,
                     history: next.historyEntry ? [next.historyEntry, ...current.history].slice(0, 100) : current.history,
                 }
                 : current,
@@ -141,6 +168,7 @@ export function App() {
                     session: next.session,
                     topUp: next.topUp,
                     missions: next.missions,
+                    notifications: next.notifications,
                 }
                 : current,
         );
@@ -232,6 +260,7 @@ export function App() {
                     onLobbyClick={() => setView("lobby")}
                     onMissionsClick={() => setView("missions")}
                     onHistoryClick={() => setView("history")}
+                    onNotificationsClick={() => setView("notifications")}
                     onTopUpClick={() => setView("topup")}
                     onSignInClick={() => {
                         setShowSignInModal(true);
@@ -245,7 +274,9 @@ export function App() {
                     isLobby={view === "lobby"}
                     isMissions={view === "missions"}
                     isHistory={view === "history"}
+                    isNotifications={view === "notifications"}
                     claimableMissionCount={claimableMissionCount}
+                    unreadNotificationCount={unreadNotificationCount}
                     isProfile={view === "profile"}
                     onProfileClick={() => setView("profile")}
                 />
@@ -297,6 +328,7 @@ export function App() {
                         />
                     )}
                     {!isLoading && state && view === "history" && <BetHistory history={state.history} />}
+                    {!isLoading && state && view === "notifications" && <NotificationsCenter notifications={state.notifications} />}
                     {!isLoading && state && view === "topup" && (
                         <TopUp policy={state.topUp} onConfirm={handleTopUp} onCancel={() => setView("lobby")} />
                     )}

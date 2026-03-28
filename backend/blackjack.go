@@ -52,11 +52,12 @@ type blackjackStartRequest struct {
 }
 
 type blackjackActionResponse struct {
-	Session      sessionDTO          `json:"session"`
-	Blackjack    *blackjackGameState `json:"blackjack"`
-	TopUp        topUpPolicy         `json:"topUp"`
-	Missions     []missionDTO        `json:"missions"`
-	HistoryEntry *betRecord          `json:"historyEntry,omitempty"`
+	Session       sessionDTO          `json:"session"`
+	Blackjack     *blackjackGameState `json:"blackjack"`
+	TopUp         topUpPolicy         `json:"topUp"`
+	Missions      []missionDTO        `json:"missions"`
+	Notifications []notificationDTO   `json:"notifications"`
+	HistoryEntry  *betRecord          `json:"historyEntry,omitempty"`
 }
 
 type blackjackOutcome struct {
@@ -184,6 +185,11 @@ func (a *application) handleBlackjackStart(w http.ResponseWriter, r *http.Reques
 			writeError(w, http.StatusInternalServerError, "failed to update missions")
 			return
 		}
+
+		if err := a.sendNotificationTx(r.Context(), tx, lockedSession.ID, buildBlackjackNotification(*historyEntry)); err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to queue notification")
+			return
+		}
 	}
 
 	if err := tx.Commit(r.Context()); err != nil {
@@ -203,12 +209,19 @@ func (a *application) handleBlackjackStart(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	notifications, err := a.loadNotifications(r.Context(), lockedSession.ID, notificationLimit)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to refresh notifications")
+		return
+	}
+
 	writeJSON(w, http.StatusOK, blackjackActionResponse{
-		Session:      toSessionDTO(currentSession),
-		Blackjack:    toBlackjackGameState(game),
-		TopUp:        buildTopUpPolicy(currentSession.LastTopUpAt),
-		Missions:     missions,
-		HistoryEntry: historyEntry,
+		Session:       toSessionDTO(currentSession),
+		Blackjack:     toBlackjackGameState(game),
+		TopUp:         buildTopUpPolicy(currentSession.LastTopUpAt),
+		Missions:      missions,
+		Notifications: notifications,
+		HistoryEntry:  historyEntry,
 	})
 }
 
@@ -297,12 +310,19 @@ func (a *application) handleBlackjackAction(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	notifications, err := a.loadNotifications(r.Context(), session.ID, notificationLimit)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to refresh notifications")
+		return
+	}
+
 	writeJSON(w, http.StatusOK, blackjackActionResponse{
-		Session:      toSessionDTO(currentSession),
-		Blackjack:    toBlackjackGameState(game),
-		TopUp:        buildTopUpPolicy(currentSession.LastTopUpAt),
-		Missions:     missions,
-		HistoryEntry: historyEntry,
+		Session:       toSessionDTO(currentSession),
+		Blackjack:     toBlackjackGameState(game),
+		TopUp:         buildTopUpPolicy(currentSession.LastTopUpAt),
+		Missions:      missions,
+		Notifications: notifications,
+		HistoryEntry:  historyEntry,
 	})
 }
 
@@ -345,6 +365,10 @@ func (a *application) finishBlackjackHand(
 		Amount:  game.BetAmount,
 	}); err != nil {
 		return nil, fmt.Errorf("failed to update missions: %w", err)
+	}
+
+	if err := a.sendNotificationTx(ctx, tx, session.ID, buildBlackjackNotification(*historyEntry)); err != nil {
+		return nil, fmt.Errorf("failed to queue notification: %w", err)
 	}
 
 	return historyEntry, nil
@@ -706,6 +730,32 @@ func buildBlackjackHistory(game *blackjackGame, balanceAfter int64, outcome blac
 		Outcome:      outcome.Outcome,
 		BalanceAfter: balanceAfter,
 		Timestamp:    time.Now().UTC(),
+	}
+}
+
+func buildBlackjackNotification(history betRecord) notificationInput {
+	switch history.Outcome {
+	case "win":
+		return notificationInput{
+			Category: "notification",
+			Severity: "success",
+			Title:    "Blackjack hand won",
+			Message:  fmt.Sprintf("%s resolved in your favor for a %d credit hand.", history.Result, history.Amount),
+		}
+	case "push":
+		return notificationInput{
+			Category: "notification",
+			Severity: "info",
+			Title:    "Blackjack hand pushed",
+			Message:  fmt.Sprintf("Your %d credit blackjack hand ended in a push.", history.Amount),
+		}
+	default:
+		return notificationInput{
+			Category: "notification",
+			Severity: "warning",
+			Title:    "Blackjack hand lost",
+			Message:  fmt.Sprintf("The dealer closed out your %d credit hand.", history.Amount),
+		}
 	}
 }
 

@@ -79,11 +79,12 @@ type topUpPolicy struct {
 }
 
 type stateResponse struct {
-	Session   sessionDTO          `json:"session"`
-	History   []betRecord         `json:"history"`
-	TopUp     topUpPolicy         `json:"topUp"`
-	Missions  []missionDTO        `json:"missions"`
-	Blackjack *blackjackGameState `json:"blackjack,omitempty"`
+	Session       sessionDTO          `json:"session"`
+	History       []betRecord         `json:"history"`
+	TopUp         topUpPolicy         `json:"topUp"`
+	Missions      []missionDTO        `json:"missions"`
+	Notifications []notificationDTO   `json:"notifications"`
+	Blackjack     *blackjackGameState `json:"blackjack,omitempty"`
 }
 
 type coinFlipRequest struct {
@@ -92,10 +93,11 @@ type coinFlipRequest struct {
 }
 
 type coinFlipResponse struct {
-	Session  sessionDTO   `json:"session"`
-	Bet      betRecord    `json:"bet"`
-	TopUp    topUpPolicy  `json:"topUp"`
-	Missions []missionDTO `json:"missions"`
+	Session       sessionDTO        `json:"session"`
+	Bet           betRecord         `json:"bet"`
+	TopUp         topUpPolicy       `json:"topUp"`
+	Missions      []missionDTO      `json:"missions"`
+	Notifications []notificationDTO `json:"notifications"`
 }
 
 type topUpRequest struct {
@@ -103,10 +105,11 @@ type topUpRequest struct {
 }
 
 type topUpResponse struct {
-	Session        sessionDTO   `json:"session"`
-	CreditedAmount int64        `json:"creditedAmount"`
-	TopUp          topUpPolicy  `json:"topUp"`
-	Missions       []missionDTO `json:"missions"`
+	Session        sessionDTO        `json:"session"`
+	CreditedAmount int64             `json:"creditedAmount"`
+	TopUp          topUpPolicy       `json:"topUp"`
+	Missions       []missionDTO      `json:"missions"`
+	Notifications  []notificationDTO `json:"notifications"`
 }
 
 type profileResponse struct {
@@ -146,6 +149,8 @@ func main() {
 	mux.HandleFunc("POST /api/auth/login", app.handleLogin)
 	mux.HandleFunc("POST /api/auth/logout", app.handleLogout)
 	mux.HandleFunc("GET /api/state", app.handleState)
+	mux.HandleFunc("GET /api/notifications", app.handleNotifications)
+	mux.HandleFunc("POST /api/notifications/read", app.handleNotificationsRead)
 	mux.HandleFunc("POST /api/coinflip", app.handleCoinFlip)
 	mux.HandleFunc("POST /api/top-up", app.handleTopUp)
 	mux.HandleFunc("POST /api/missions/claim", app.handleMissionClaim)
@@ -261,6 +266,21 @@ CREATE UNIQUE INDEX IF NOT EXISTS session_missions_cycle_slot_idx
 CREATE INDEX IF NOT EXISTS session_missions_session_cycle_idx
     ON session_missions(session_id, cycle_start);
 
+CREATE TABLE IF NOT EXISTS notifications (
+    id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+    category TEXT NOT NULL,
+    severity TEXT NOT NULL,
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    read_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS notifications_session_created_at_idx
+    ON notifications(session_id, created_at DESC);
+
 CREATE TABLE IF NOT EXISTS blackjack_games (
     id TEXT PRIMARY KEY,
     session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
@@ -315,12 +335,19 @@ func (a *application) handleState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	notifications, err := a.loadNotifications(r.Context(), session.ID, notificationLimit)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load notifications")
+		return
+	}
+
 	writeJSON(w, http.StatusOK, stateResponse{
-		Session:   toSessionDTO(session),
-		History:   history,
-		TopUp:     buildTopUpPolicy(session.LastTopUpAt),
-		Missions:  missions,
-		Blackjack: blackjack,
+		Session:       toSessionDTO(session),
+		History:       history,
+		TopUp:         buildTopUpPolicy(session.LastTopUpAt),
+		Missions:      missions,
+		Notifications: notifications,
+		Blackjack:     blackjack,
 	})
 }
 
@@ -446,6 +473,28 @@ func (a *application) handleCoinFlip(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if won {
+		if err := a.sendNotificationTx(r.Context(), tx, locked.ID, notificationInput{
+			Category: "notification",
+			Severity: "success",
+			Title:    "Flipzilla paid out",
+			Message:  fmt.Sprintf("Your %s call landed. %+d credits returned to the table.", req.Choice, req.Amount),
+		}); err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to queue notification")
+			return
+		}
+	} else if locked.Balance > 100 && nextBalance <= 100 {
+		if err := a.sendNotificationTx(r.Context(), tx, locked.ID, notificationInput{
+			Category: "notification",
+			Severity: "warning",
+			Title:    "Balance running low",
+			Message:  "You dropped to 100 credits or less. A top up might keep the table alive.",
+		}); err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to queue notification")
+			return
+		}
+	}
+
 	if err := tx.Commit(r.Context()); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to commit bet")
 		return
@@ -463,11 +512,18 @@ func (a *application) handleCoinFlip(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	notifications, err := a.loadNotifications(r.Context(), locked.ID, notificationLimit)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to reload notifications")
+		return
+	}
+
 	writeJSON(w, http.StatusOK, coinFlipResponse{
-		Session:  toSessionDTO(currentSession),
-		Bet:      bet,
-		TopUp:    buildTopUpPolicy(currentSession.LastTopUpAt),
-		Missions: missions,
+		Session:       toSessionDTO(currentSession),
+		Bet:           bet,
+		TopUp:         buildTopUpPolicy(currentSession.LastTopUpAt),
+		Missions:      missions,
+		Notifications: notifications,
 	})
 }
 
@@ -527,6 +583,16 @@ func (a *application) handleTopUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := a.sendNotificationTx(r.Context(), tx, locked.ID, notificationInput{
+		Category: "notification",
+		Severity: "success",
+		Title:    "Balance topped up",
+		Message:  fmt.Sprintf("%d credits were added to your session balance.", req.Amount),
+	}); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to queue notification")
+		return
+	}
+
 	if err := tx.Commit(r.Context()); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to commit top up")
 		return
@@ -544,11 +610,18 @@ func (a *application) handleTopUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	notifications, err := a.loadNotifications(r.Context(), locked.ID, notificationLimit)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to reload notifications")
+		return
+	}
+
 	writeJSON(w, http.StatusOK, topUpResponse{
 		Session:        toSessionDTO(currentSession),
 		CreditedAmount: req.Amount,
 		TopUp:          buildTopUpPolicy(currentSession.LastTopUpAt),
 		Missions:       missions,
+		Notifications:  notifications,
 	})
 }
 
