@@ -77,6 +77,7 @@ type missionClaimResponse struct {
 	Session          sessionDTO        `json:"session"`
 	TopUp            topUpPolicy       `json:"topUp"`
 	Missions         []missionDTO      `json:"missions"`
+	Achievements     []achievementDTO  `json:"achievements"`
 	Notifications    []notificationDTO `json:"notifications"`
 	ClaimedMissionID string            `json:"claimedMissionId"`
 	RewardBalance    int64             `json:"rewardBalance"`
@@ -299,6 +300,12 @@ func (a *application) handleMissionClaim(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	achievements, err := a.loadAchievements(r.Context(), session.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to reload achievements")
+		return
+	}
+
 	notifications, err := a.loadNotifications(r.Context(), session.ID, notificationLimit)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to reload notifications")
@@ -309,6 +316,7 @@ func (a *application) handleMissionClaim(w http.ResponseWriter, r *http.Request)
 		Session:          toSessionDTO(currentSession),
 		TopUp:            buildTopUpPolicy(currentSession.LastTopUpAt),
 		Missions:         missions,
+		Achievements:     achievements,
 		Notifications:    notifications,
 		ClaimedMissionID: mission.ID,
 		RewardBalance:    mission.RewardBalance,

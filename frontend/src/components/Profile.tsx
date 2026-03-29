@@ -25,7 +25,7 @@ export function Profile({ session }: ProfileProps) {
 
   return (
     <section className="w-full max-w-2xl space-y-4">
-      <p className="text-xs uppercase tracking-[0.3em] text-slate-300/70">Player Profile</p>
+      <p className="text-xs uppercase tracking-[0.3em] text-slate-300/70">Profile</p>
 
       {/* Session info */}
       <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
@@ -62,7 +62,7 @@ export function Profile({ session }: ProfileProps) {
 
       {stats && (
         <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-300/70">Betting Stats</p>
+          <p className="text-xs uppercase tracking-[0.3em] text-slate-300/70">Stats</p>
           <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
             <Stat label="Total Bets" value={formatNumber(stats.totalBets)} />
             <Stat label="Wins" value={formatNumber(stats.totalWins)} accent="text-emerald-300" />

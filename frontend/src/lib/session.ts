@@ -70,9 +70,25 @@ export type Mission = {
     resetsAt: string;
 };
 
+export type Achievement = {
+    id: string;
+    templateKey: string;
+    groupName: string;
+    title: string;
+    description: string;
+    gameScope: "all" | "coinflip" | "blackjack";
+    rarity: "common" | "uncommon" | "rare" | "epic";
+    accent: "copper" | "cyan" | "emerald" | "rose" | "gold";
+    iconLabel: string;
+    target: number;
+    progress: number;
+    status: "locked" | "unlocked";
+    unlockedAt?: string;
+};
+
 export type AppNotification = {
     id: string;
-    category: "notification" | "news";
+    category: "notification";
     severity: "info" | "success" | "warning";
     title: string;
     message: string;
@@ -86,6 +102,7 @@ export type AppState = {
     history: BetRecord[];
     topUp: TopUpPolicy;
     missions: Mission[];
+    achievements: Achievement[];
     notifications: AppNotification[];
     blackjack?: BlackjackGameState | null;
 };
@@ -95,6 +112,7 @@ export type CoinFlipResult = {
     bet: BetRecord;
     topUp: TopUpPolicy;
     missions: Mission[];
+    achievements: Achievement[];
     notifications: AppNotification[];
 };
 
@@ -103,6 +121,7 @@ export type TopUpResult = {
     creditedAmount: number;
     topUp: TopUpPolicy;
     missions: Mission[];
+    achievements: Achievement[];
     notifications: AppNotification[];
 };
 
@@ -111,6 +130,7 @@ export type BlackjackActionResult = {
     blackjack: BlackjackGameState;
     topUp: TopUpPolicy;
     missions: Mission[];
+    achievements: Achievement[];
     notifications: AppNotification[];
     historyEntry?: BetRecord;
 };
@@ -119,6 +139,7 @@ export type MissionClaimResult = {
     session: Session;
     topUp: TopUpPolicy;
     missions: Mission[];
+    achievements: Achievement[];
     notifications: AppNotification[];
     claimedMissionId: string;
     rewardBalance: number;

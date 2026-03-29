@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./index.css";
 
 import {
@@ -11,6 +11,7 @@ import {
     standBlackjack,
     startBlackjack,
     submitCoinFlip,
+    type Achievement,
     type AppState,
     type BlackjackActionResult,
     type CoinSide,
@@ -23,17 +24,18 @@ import type { GameRuleKey } from "./lib/gameRules";
 import { Header } from "./components/Header";
 import { Lobby } from "./components/Lobby";
 import { MissionsBoard } from "./components/MissionsBoard";
+import { AchievementsBoard } from "./components/AchievementsBoard";
 import { CoinFlipGame } from "./components/CoinFlipGame";
 import { BlackjackGame } from "./components/BlackjackGame";
 import { BetHistory } from "./components/BetHistory";
 import { GameRulesModal } from "./components/GameRulesModal";
 import { TopUp } from "./components/TopUp";
 import { SignInModal } from "./components/SignInModal";
-import { SignUpModal } from "./components/SignUpModal";
 import { Profile } from "./components/Profile";
 import { NotificationsCenter } from "./components/NotificationsCenter";
+import { AchievementUnlockToasts } from "./components/AchievementUnlockToasts";
 
-type View = "lobby" | "missions" | "coinflip" | "blackjack" | "history" | "topup" | "profile" | "notifications";
+type View = "lobby" | "missions" | "achievements" | "coinflip" | "blackjack" | "history" | "topup" | "profile" | "notifications";
 
 export function App() {
     const [view, setView] = useState<View>("lobby");
@@ -44,10 +46,14 @@ export function App() {
     const [showAuthModal, setShowAuthModal] = useState(false);
     const [authModalView, setAuthModalView] = useState<"choose" | "signin" | "signup">("choose");
     const [showSignInModal, setShowSignInModal] = useState(false);
-    const [showSignUpModal, setShowSignUpModal] = useState(false);
+    const [achievementToasts, setAchievementToasts] = useState<Achievement[]>([]);
+    const hasHydratedAchievements = useRef(false);
+    const unlockedAchievementKeys = useRef<Set<string>>(new Set());
+    const previousSessionId = useRef<string | null>(null);
 
     const claimableMissionCount = state?.missions.filter(mission => mission.status === "claimable").length ?? 0;
     const unreadNotificationCount = state?.notifications.filter(notification => !notification.isRead).length ?? 0;
+    const unlockedAchievementCount = state?.achievements.filter(achievement => achievement.status === "unlocked").length ?? 0;
 
     useEffect(() => {
         if (typeof window === "undefined") {
@@ -102,6 +108,38 @@ export function App() {
             });
     }, [unreadNotificationCount, view]);
 
+    useEffect(() => {
+        if (!state) {
+            return;
+        }
+
+        const currentUnlockedKeys = new Set(
+            state.achievements.filter(achievement => achievement.status === "unlocked").map(achievement => achievement.templateKey),
+        );
+
+        if (!hasHydratedAchievements.current || previousSessionId.current !== state.session.id) {
+            unlockedAchievementKeys.current = currentUnlockedKeys;
+            hasHydratedAchievements.current = true;
+            previousSessionId.current = state.session.id;
+            return;
+        }
+
+        const newlyUnlocked = state.achievements.filter(
+            achievement =>
+                achievement.status === "unlocked" && !unlockedAchievementKeys.current.has(achievement.templateKey),
+        );
+
+        if (newlyUnlocked.length > 0) {
+            setAchievementToasts(current => {
+                const currentKeys = new Set(current.map(achievement => achievement.templateKey));
+                return [...current, ...newlyUnlocked.filter(achievement => !currentKeys.has(achievement.templateKey))];
+            });
+        }
+
+        unlockedAchievementKeys.current = currentUnlockedKeys;
+        previousSessionId.current = state.session.id;
+    }, [state]);
+
     const loadState = async () => {
         setIsLoading(true);
         setLoadingError(null);
@@ -124,6 +162,7 @@ export function App() {
                     history: [next.bet, ...current.history].slice(0, 100),
                     topUp: next.topUp,
                     missions: next.missions,
+                    achievements: next.achievements,
                     notifications: next.notifications,
                 }
                 : current,
@@ -138,6 +177,7 @@ export function App() {
                     session: next.session,
                     topUp: next.topUp,
                     missions: next.missions,
+                    achievements: next.achievements,
                     notifications: next.notifications,
                 }
                 : current,
@@ -152,6 +192,7 @@ export function App() {
                     session: next.session,
                     topUp: next.topUp,
                     missions: next.missions,
+                    achievements: next.achievements,
                     blackjack: next.blackjack,
                     notifications: next.notifications,
                     history: next.historyEntry ? [next.historyEntry, ...current.history].slice(0, 100) : current.history,
@@ -168,6 +209,7 @@ export function App() {
                     session: next.session,
                     topUp: next.topUp,
                     missions: next.missions,
+                    achievements: next.achievements,
                     notifications: next.notifications,
                 }
                 : current,
@@ -237,7 +279,6 @@ export function App() {
         }
         setShowAuthModal(false);
         setShowSignInModal(false);
-        setShowSignUpModal(false);
         setAuthModalView("choose");
         await loadState();
     };
@@ -259,24 +300,24 @@ export function App() {
                     showAuthActions={!isLoading}
                     onLobbyClick={() => setView("lobby")}
                     onMissionsClick={() => setView("missions")}
+                    onAchievementsClick={() => setView("achievements")}
                     onHistoryClick={() => setView("history")}
                     onNotificationsClick={() => setView("notifications")}
                     onTopUpClick={() => setView("topup")}
                     onSignInClick={() => {
                         setShowSignInModal(true);
                     }}
-                    onSignUpClick={() => {
-                        setShowSignUpModal(true);
-                    }}
                     onLogoutClick={() => {
                         void handleLogout();
                     }}
                     isLobby={view === "lobby"}
                     isMissions={view === "missions"}
+                    isAchievements={view === "achievements"}
                     isHistory={view === "history"}
                     isNotifications={view === "notifications"}
                     claimableMissionCount={claimableMissionCount}
                     unreadNotificationCount={unreadNotificationCount}
+                    unlockedAchievementCount={unlockedAchievementCount}
                     isProfile={view === "profile"}
                     onProfileClick={() => setView("profile")}
                 />
@@ -284,8 +325,7 @@ export function App() {
                 <main className="flex flex-1 items-center justify-center py-12">
                     {isLoading && (
                         <section className="w-full max-w-md rounded-3xl border border-white/10 bg-white/5 p-8 text-center">
-                            <p className="text-xs uppercase tracking-[0.3em] text-slate-300/70">Loading table state</p>
-                            <p className="mt-4 text-sm text-slate-300/80">Syncing your server-side balance and history.</p>
+                            <p className="text-xs uppercase tracking-[0.3em] text-slate-300/70">Loading</p>
                         </section>
                     )}
 
@@ -308,12 +348,15 @@ export function App() {
                             onSelectCoinFlip={() => setView("coinflip")}
                             onSelectBlackjack={() => setView("blackjack")}
                             onOpenMissions={() => setView("missions")}
+                            onOpenAchievements={() => setView("achievements")}
                             missions={state.missions}
+                            achievements={state.achievements}
                         />
                     )}
                     {!isLoading && state && view === "missions" && (
                         <MissionsBoard missions={state.missions} onClaim={handleMissionClaim} />
                     )}
+                    {!isLoading && state && view === "achievements" && <AchievementsBoard achievements={state.achievements} />}
                     {!isLoading && state && view === "coinflip" && (
                         <CoinFlipGame balance={state.session.balance} onFlip={handleCoinFlip} onOpenRules={() => openRules("coinflip")} />
                     )}
@@ -356,14 +399,14 @@ export function App() {
                     }}
                 />
             )}
-            {showSignUpModal && (
-                <SignUpModal
-                    onBack={() => setShowSignUpModal(false)}
-                    onSuccess={() => {
-                        void handleAuthSuccess();
-                    }}
-                />
-            )}
+            <AchievementUnlockToasts
+                achievements={achievementToasts}
+                onDismiss={templateKey => {
+                    setAchievementToasts(current =>
+                        current.filter(achievement => achievement.templateKey !== templateKey),
+                    );
+                }}
+            />
         </div>
     );
 }

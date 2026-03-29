@@ -56,6 +56,7 @@ type blackjackActionResponse struct {
 	Blackjack     *blackjackGameState `json:"blackjack"`
 	TopUp         topUpPolicy         `json:"topUp"`
 	Missions      []missionDTO        `json:"missions"`
+	Achievements  []achievementDTO    `json:"achievements"`
 	Notifications []notificationDTO   `json:"notifications"`
 	HistoryEntry  *betRecord          `json:"historyEntry,omitempty"`
 }
@@ -186,6 +187,16 @@ func (a *application) handleBlackjackStart(w http.ResponseWriter, r *http.Reques
 			return
 		}
 
+		if err := a.applyAchievementProgressTx(r.Context(), tx, lockedSession.ID, achievementProgressEvent{
+			Game:    "blackjack",
+			Outcome: historyEntry.Outcome,
+			Amount:  game.BetAmount,
+			Status:  game.Status,
+		}); err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to update achievements")
+			return
+		}
+
 		if err := a.sendNotificationTx(r.Context(), tx, lockedSession.ID, buildBlackjackNotification(*historyEntry)); err != nil {
 			writeError(w, http.StatusInternalServerError, "failed to queue notification")
 			return
@@ -209,6 +220,12 @@ func (a *application) handleBlackjackStart(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	achievements, err := a.loadAchievements(r.Context(), lockedSession.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to refresh achievements")
+		return
+	}
+
 	notifications, err := a.loadNotifications(r.Context(), lockedSession.ID, notificationLimit)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to refresh notifications")
@@ -220,6 +237,7 @@ func (a *application) handleBlackjackStart(w http.ResponseWriter, r *http.Reques
 		Blackjack:     toBlackjackGameState(game),
 		TopUp:         buildTopUpPolicy(currentSession.LastTopUpAt),
 		Missions:      missions,
+		Achievements:  achievements,
 		Notifications: notifications,
 		HistoryEntry:  historyEntry,
 	})
@@ -310,6 +328,12 @@ func (a *application) handleBlackjackAction(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	achievements, err := a.loadAchievements(r.Context(), session.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to refresh achievements")
+		return
+	}
+
 	notifications, err := a.loadNotifications(r.Context(), session.ID, notificationLimit)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to refresh notifications")
@@ -321,6 +345,7 @@ func (a *application) handleBlackjackAction(w http.ResponseWriter, r *http.Reque
 		Blackjack:     toBlackjackGameState(game),
 		TopUp:         buildTopUpPolicy(currentSession.LastTopUpAt),
 		Missions:      missions,
+		Achievements:  achievements,
 		Notifications: notifications,
 		HistoryEntry:  historyEntry,
 	})
@@ -365,6 +390,15 @@ func (a *application) finishBlackjackHand(
 		Amount:  game.BetAmount,
 	}); err != nil {
 		return nil, fmt.Errorf("failed to update missions: %w", err)
+	}
+
+	if err := a.applyAchievementProgressTx(ctx, tx, session.ID, achievementProgressEvent{
+		Game:    "blackjack",
+		Outcome: outcome.Outcome,
+		Amount:  game.BetAmount,
+		Status:  outcome.Status,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to update achievements: %w", err)
 	}
 
 	if err := a.sendNotificationTx(ctx, tx, session.ID, buildBlackjackNotification(*historyEntry)); err != nil {

@@ -44,12 +44,9 @@ export function TopUp({ policy, onConfirm, onCancel }: TopUpProps) {
         }
     };
 
-    return (
+        return (
         <section className="w-full max-w-sm rounded-3xl border border-white/10 bg-white/5 p-8">
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-300/70">Practice Credit Faucet</p>
-            <p className="mt-1 text-xs text-slate-500">
-                Credits are issued by the server in fixed amounts to prevent client-side balance edits.
-            </p>
+            <p className="text-xs uppercase tracking-[0.3em] text-slate-300/70">Top up</p>
 
             <div className="mt-6 grid grid-cols-3 gap-3">
                 {policy.allowedAmounts.map(amount => (

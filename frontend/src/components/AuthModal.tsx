@@ -70,22 +70,13 @@ export function AuthModal({ initialView = "choose", onContinueAsGuest, onAuthSuc
                                 Continue as Guest
                             </button>
 
-                            <div className="grid grid-cols-2 gap-3">
-                                <button
-                                    onClick={() => setView("signin")}
-                                    className="rounded-full border border-cyan-400/30 bg-cyan-400/8 px-4 py-2 text-sm font-semibold text-cyan-200 transition hover:bg-cyan-400/12"
-                                    type="button"
-                                >
-                                    Sign in
-                                </button>
-                                <button
-                                    onClick={() => setView("signup")}
-                                    className="rounded-full border border-amber-300/30 bg-amber-300/8 px-4 py-2 text-sm font-semibold text-amber-200 transition hover:bg-amber-300/12"
-                                    type="button"
-                                >
-                                    Create account
-                                </button>
-                            </div>
+                            <button
+                                onClick={() => setView("signin")}
+                                className="rounded-full border border-cyan-400/30 bg-cyan-400/8 px-4 py-2 text-sm font-semibold text-cyan-200 transition hover:bg-cyan-400/12"
+                                type="button"
+                            >
+                                Sign in
+                            </button>
                         </>
                     )}
 
@@ -111,6 +102,16 @@ export function AuthModal({ initialView = "choose", onContinueAsGuest, onAuthSuc
                                 />
                             </label>
                             {error && <p className="text-sm text-rose-300">{error}</p>}
+                            <button
+                                onClick={() => {
+                                    setError(null);
+                                    setView("signup");
+                                }}
+                                type="button"
+                                className="justify-self-start text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200/80 transition hover:text-cyan-100"
+                            >
+                                Create account
+                            </button>
                             <div className="mt-2 flex items-center justify-between">
                                 <button onClick={goBack} type="button" className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-200 transition hover:bg-white/10">
                                     Back
@@ -144,6 +145,16 @@ export function AuthModal({ initialView = "choose", onContinueAsGuest, onAuthSuc
                                 />
                             </label>
                             {error && <p className="text-sm text-rose-300">{error}</p>}
+                            <button
+                                onClick={() => {
+                                    setError(null);
+                                    setView("signin");
+                                }}
+                                type="button"
+                                className="justify-self-start text-xs font-semibold uppercase tracking-[0.2em] text-amber-200/80 transition hover:text-amber-100"
+                            >
+                                Back to sign in
+                            </button>
                             <div className="mt-2 flex items-center justify-between">
                                 <button onClick={goBack} type="button" className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-200 transition hover:bg-white/10">
                                     Back

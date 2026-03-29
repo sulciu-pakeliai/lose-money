@@ -56,8 +56,8 @@ func TestMissionProgressAndStatus(t *testing.T) {
 func TestNotificationNormalizers(t *testing.T) {
 	t.Parallel()
 
-	if got := normalizeNotificationCategory("news"); got != "news" {
-		t.Fatalf("normalizeNotificationCategory(news) = %s, want news", got)
+	if got := normalizeNotificationCategory("news"); got != "notification" {
+		t.Fatalf("normalizeNotificationCategory(news) = %s, want notification", got)
 	}
 	if got := normalizeNotificationCategory("other"); got != "notification" {
 		t.Fatalf("normalizeNotificationCategory(other) = %s, want notification", got)

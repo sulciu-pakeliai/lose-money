@@ -75,11 +75,7 @@ export function MissionsBoard({ missions, onClaim }: MissionsBoardProps) {
         <section className="page-swap page-from-right w-full max-w-5xl rounded-[2rem] border border-white/10 bg-white/5 p-6">
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                 <div>
-                    <p className="text-xs uppercase tracking-[0.3em] text-slate-300/70">Mission control</p>
                     <h2 className="mt-2 font-display text-4xl text-white">Daily missions</h2>
-                    <p className="mt-2 max-w-2xl text-sm text-slate-300/75">
-                        Every day assigns one casino-wide objective plus one mission for each game. Claim rewards straight into your balance.
-                    </p>
                 </div>
                 <div className="flex flex-wrap gap-3">
                     <div className="rounded-2xl border border-amber-300/25 bg-amber-300/10 px-4 py-3 text-right">
@@ -114,7 +110,7 @@ export function MissionsBoard({ missions, onClaim }: MissionsBoardProps) {
                                 : "border-white/10 bg-black/20";
 
                     return (
-                        <article key={mission.id} className={`rounded-3xl border p-5 ${tone}`}>
+                        <article key={mission.id} className={`flex h-full flex-col rounded-3xl border p-5 ${tone}`}>
                             <div className="flex items-start justify-between gap-4">
                                 <div>
                                     <p className="text-[10px] uppercase tracking-[0.3em] text-slate-300/65">{mission.groupName}</p>
@@ -146,19 +142,21 @@ export function MissionsBoard({ missions, onClaim }: MissionsBoardProps) {
                                 </span>
                             </div>
 
-                            <button
-                                onClick={() => void handleClaim(mission.id)}
-                                disabled={!canClaim}
-                                className={`arcade-button mt-5 w-full rounded-2xl px-4 py-3 text-xs font-semibold uppercase tracking-[0.22em] transition disabled:cursor-not-allowed disabled:opacity-55 ${mission.status === "claimed"
-                                        ? "border border-white/10 bg-white/5 text-slate-300"
-                                        : mission.status === "claimable"
-                                            ? "bg-emerald-300 text-slate-950 hover:bg-emerald-200"
-                                            : "border border-white/10 bg-white/5 text-slate-300"
-                                    }`}
-                                type="button"
-                            >
-                                {isClaiming ? "Claiming..." : mission.status === "claimable" ? "Claim reward" : mission.status === "claimed" ? "Reward claimed" : "In progress"}
-                            </button>
+                            <div className="mt-auto pt-5">
+                                <button
+                                    onClick={() => void handleClaim(mission.id)}
+                                    disabled={!canClaim}
+                                    className={`arcade-button w-full rounded-2xl px-4 py-3 text-xs font-semibold uppercase tracking-[0.22em] transition disabled:cursor-not-allowed disabled:opacity-55 ${mission.status === "claimed"
+                                            ? "border border-white/10 bg-white/5 text-slate-300"
+                                            : mission.status === "claimable"
+                                                ? "bg-emerald-300 text-slate-950 hover:bg-emerald-200"
+                                                : "border border-white/10 bg-white/5 text-slate-300"
+                                        }`}
+                                    type="button"
+                                >
+                                    {isClaiming ? "Claiming..." : mission.status === "claimable" ? "Claim reward" : mission.status === "claimed" ? "Reward claimed" : "In progress"}
+                                </button>
+                            </div>
                         </article>
                     );
                 })}

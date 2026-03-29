@@ -83,6 +83,7 @@ type stateResponse struct {
 	History       []betRecord         `json:"history"`
 	TopUp         topUpPolicy         `json:"topUp"`
 	Missions      []missionDTO        `json:"missions"`
+	Achievements  []achievementDTO    `json:"achievements"`
 	Notifications []notificationDTO   `json:"notifications"`
 	Blackjack     *blackjackGameState `json:"blackjack,omitempty"`
 }
@@ -97,6 +98,7 @@ type coinFlipResponse struct {
 	Bet           betRecord         `json:"bet"`
 	TopUp         topUpPolicy       `json:"topUp"`
 	Missions      []missionDTO      `json:"missions"`
+	Achievements  []achievementDTO  `json:"achievements"`
 	Notifications []notificationDTO `json:"notifications"`
 }
 
@@ -109,6 +111,7 @@ type topUpResponse struct {
 	CreditedAmount int64             `json:"creditedAmount"`
 	TopUp          topUpPolicy       `json:"topUp"`
 	Missions       []missionDTO      `json:"missions"`
+	Achievements   []achievementDTO  `json:"achievements"`
 	Notifications  []notificationDTO `json:"notifications"`
 }
 
@@ -266,6 +269,32 @@ CREATE UNIQUE INDEX IF NOT EXISTS session_missions_cycle_slot_idx
 CREATE INDEX IF NOT EXISTS session_missions_session_cycle_idx
     ON session_missions(session_id, cycle_start);
 
+CREATE TABLE IF NOT EXISTS session_achievements (
+    id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+    sort_order INTEGER NOT NULL,
+    template_key TEXT NOT NULL,
+    group_name TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    game_scope TEXT NOT NULL,
+    rarity TEXT NOT NULL,
+    accent TEXT NOT NULL,
+    icon_label TEXT NOT NULL,
+    metric TEXT NOT NULL,
+    target BIGINT NOT NULL,
+    progress BIGINT NOT NULL DEFAULT 0,
+    unlocked_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS session_achievements_session_template_idx
+    ON session_achievements(session_id, template_key);
+
+CREATE INDEX IF NOT EXISTS session_achievements_session_sort_idx
+    ON session_achievements(session_id, sort_order);
+
 CREATE TABLE IF NOT EXISTS notifications (
     id TEXT PRIMARY KEY,
     session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
@@ -335,6 +364,12 @@ func (a *application) handleState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	achievements, err := a.loadAchievements(r.Context(), session.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load achievements")
+		return
+	}
+
 	notifications, err := a.loadNotifications(r.Context(), session.ID, notificationLimit)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to load notifications")
@@ -346,6 +381,7 @@ func (a *application) handleState(w http.ResponseWriter, r *http.Request) {
 		History:       history,
 		TopUp:         buildTopUpPolicy(session.LastTopUpAt),
 		Missions:      missions,
+		Achievements:  achievements,
 		Notifications: notifications,
 		Blackjack:     blackjack,
 	})
@@ -473,6 +509,15 @@ func (a *application) handleCoinFlip(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := a.applyAchievementProgressTx(r.Context(), tx, locked.ID, achievementProgressEvent{
+		Game:    "coinflip",
+		Outcome: outcome,
+		Amount:  req.Amount,
+	}); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to update achievements")
+		return
+	}
+
 	if won {
 		if err := a.sendNotificationTx(r.Context(), tx, locked.ID, notificationInput{
 			Category: "notification",
@@ -512,6 +557,12 @@ func (a *application) handleCoinFlip(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	achievements, err := a.loadAchievements(r.Context(), locked.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to reload achievements")
+		return
+	}
+
 	notifications, err := a.loadNotifications(r.Context(), locked.ID, notificationLimit)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to reload notifications")
@@ -523,6 +574,7 @@ func (a *application) handleCoinFlip(w http.ResponseWriter, r *http.Request) {
 		Bet:           bet,
 		TopUp:         buildTopUpPolicy(currentSession.LastTopUpAt),
 		Missions:      missions,
+		Achievements:  achievements,
 		Notifications: notifications,
 	})
 }
@@ -610,6 +662,12 @@ func (a *application) handleTopUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	achievements, err := a.loadAchievements(r.Context(), locked.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to reload achievements")
+		return
+	}
+
 	notifications, err := a.loadNotifications(r.Context(), locked.ID, notificationLimit)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to reload notifications")
@@ -621,6 +679,7 @@ func (a *application) handleTopUp(w http.ResponseWriter, r *http.Request) {
 		CreditedAmount: req.Amount,
 		TopUp:          buildTopUpPolicy(currentSession.LastTopUpAt),
 		Missions:       missions,
+		Achievements:   achievements,
 		Notifications:  notifications,
 	})
 }

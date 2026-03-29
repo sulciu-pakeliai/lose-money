@@ -57,18 +57,6 @@ var defaultNotificationSeed = []notificationInput{
 		Title:    "Welcome to LoseMoney",
 		Message:  "Your notification inbox is live. Important balance, reward, and game updates will land here.",
 	},
-	{
-		Category: "news",
-		Severity: "info",
-		Title:    "Daily missions refresh every UTC midnight",
-		Message:  "Check the missions board daily for fresh XP and balance rewards tied to both games.",
-	},
-	{
-		Category: "news",
-		Severity: "info",
-		Title:    "Top up cooldown is 30 seconds",
-		Message:  "The faucet still works, but it now respects a short cooldown between balance claims.",
-	},
 }
 
 func (a *application) handleNotifications(w http.ResponseWriter, r *http.Request) {
@@ -250,7 +238,7 @@ func scanNotification(scanner interface {
 func toNotificationDTO(record notificationRecord) notificationDTO {
 	return notificationDTO{
 		ID:        record.ID,
-		Category:  record.Category,
+		Category:  normalizeNotificationCategory(record.Category),
 		Severity:  record.Severity,
 		Title:     record.Title,
 		Message:   record.Message,
@@ -261,12 +249,7 @@ func toNotificationDTO(record notificationRecord) notificationDTO {
 }
 
 func normalizeNotificationCategory(value string) string {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "news":
-		return "news"
-	default:
-		return "notification"
-	}
+	return "notification"
 }
 
 func normalizeNotificationSeverity(value string) string {
