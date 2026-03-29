@@ -1,0 +1,835 @@
+//line C:\Users\karol\OneDrive\Desktop\IMPORTANT PORJECT\lose-money\backend\blackjack.go:1:1
+package main; import _ "runtime/coverage"
+
+import (
+	"context"
+	"crypto/rand"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"math/big"
+	"net/http"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+)
+
+type blackjackCard struct {
+	Rank string `json:"rank"`
+	Suit string `json:"suit"`
+}
+
+type blackjackGame struct {
+	ID          string
+	SessionID   string
+	BetAmount   int64
+	Deck        []blackjackCard
+	PlayerCards []blackjackCard
+	DealerCards []blackjackCard
+	Status      string
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	CompletedAt *time.Time
+}
+
+type blackjackGameState struct {
+	ID                string          `json:"id"`
+	BetAmount         int64           `json:"betAmount"`
+	PlayerCards       []blackjackCard `json:"playerCards"`
+	DealerCards       []blackjackCard `json:"dealerCards"`
+	DealerHiddenCount int             `json:"dealerHiddenCount"`
+	PlayerTotal       int             `json:"playerTotal"`
+	DealerTotal       int             `json:"dealerTotal"`
+	Status            string          `json:"status"`
+	Message           string          `json:"message"`
+	CanHit            bool            `json:"canHit"`
+	CanStand          bool            `json:"canStand"`
+	IsComplete        bool            `json:"isComplete"`
+	CompletedAt       *time.Time      `json:"completedAt,omitempty"`
+}
+
+type blackjackStartRequest struct {
+	Amount int64 `json:"amount"`
+}
+
+type blackjackActionResponse struct {
+	Session       sessionDTO          `json:"session"`
+	Blackjack     *blackjackGameState `json:"blackjack"`
+	TopUp         topUpPolicy         `json:"topUp"`
+	Missions      []missionDTO        `json:"missions"`
+	Notifications []notificationDTO   `json:"notifications"`
+	HistoryEntry  *betRecord          `json:"historyEntry,omitempty"`
+}
+
+type blackjackOutcome struct {
+	Status  string
+	Message string
+	Payout  int64
+	Outcome string
+	Choice  string
+	Result  string
+}
+
+type blackjackScore struct {
+	Total       int
+	IsSoft      bool
+	IsBust      bool
+	IsBlackjack bool
+}
+
+func (a *application) handleBlackjackStart(w http.ResponseWriter, r *http.Request) {goCover_f21fab6d58de__5[0] = 40 ; goCover_f21fab6d58de__5[1] = goCover_f21fab6d58de_P ; goCover_f21fab6d58de__5[2] = 5 ; goCover_f21fab6d58de__5[3] = 1;
+	session, err := a.ensureSession(w, r)
+	if err != nil {goCover_f21fab6d58de__5[21] = 1;
+		writeError(w, http.StatusInternalServerError, "failed to load session")
+		return
+	}
+
+	goCover_f21fab6d58de__5[4] = 1;var req blackjackStartRequest
+	if err := decodeJSON(r, &req); err != nil {goCover_f21fab6d58de__5[22] = 1;
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	goCover_f21fab6d58de__5[5] = 1;if req.Amount < 1 || req.Amount > maxBetAmount {goCover_f21fab6d58de__5[23] = 1;
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("bet amount must be between 1 and %d", maxBetAmount))
+		return
+	}
+
+	goCover_f21fab6d58de__5[6] = 1;tx, err := a.db.Begin(r.Context())
+	if err != nil {goCover_f21fab6d58de__5[24] = 1;
+		writeError(w, http.StatusInternalServerError, "failed to start transaction")
+		return
+	}
+	goCover_f21fab6d58de__5[7] = 1;defer tx.Rollback(r.Context())
+
+	activeGame, err := a.loadActiveBlackjackTx(r.Context(), tx, session.ID)
+	if err != nil {goCover_f21fab6d58de__5[25] = 1;
+		writeError(w, http.StatusInternalServerError, "failed to check current blackjack hand")
+		return
+	}
+	goCover_f21fab6d58de__5[8] = 1;if activeGame != nil {goCover_f21fab6d58de__5[26] = 1;
+		writeError(w, http.StatusConflict, "finish the current blackjack hand before starting a new one")
+		return
+	}
+
+	goCover_f21fab6d58de__5[9] = 1;lockedSession, err := a.lockSession(r.Context(), tx, session.ID)
+	if err != nil {goCover_f21fab6d58de__5[27] = 1;
+		writeError(w, http.StatusInternalServerError, "failed to lock session")
+		return
+	}
+	goCover_f21fab6d58de__5[10] = 1;if req.Amount > lockedSession.Balance {goCover_f21fab6d58de__5[28] = 1;
+		writeError(w, http.StatusBadRequest, "not enough balance for that bet")
+		return
+	}
+
+	goCover_f21fab6d58de__5[11] = 1;deck, err := shuffledDeck()
+	if err != nil {goCover_f21fab6d58de__5[29] = 1;
+		writeError(w, http.StatusInternalServerError, "failed to shuffle deck")
+		return
+	}
+
+	goCover_f21fab6d58de__5[12] = 1;playerCards, deck := drawCards(deck, 2)
+	dealerCards, deck := drawCards(deck, 2)
+	balanceAfterBet := lockedSession.Balance - req.Amount
+
+	now := time.Now().UTC()
+	game := &blackjackGame{
+		ID:          mustRandomToken(16),
+		SessionID:   session.ID,
+		BetAmount:   req.Amount,
+		Deck:        deck,
+		PlayerCards: playerCards,
+		DealerCards: dealerCards,
+		Status:      "active",
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}
+
+	var historyEntry *betRecord
+	finalBalance := balanceAfterBet
+	nextXP := lockedSession.XP
+	nextGamesPlayed := lockedSession.GamesPlayed
+
+	playerScore := scoreBlackjackHand(game.PlayerCards)
+	dealerScore := scoreBlackjackHand(game.DealerCards)
+	if playerScore.IsBlackjack || dealerScore.IsBlackjack {goCover_f21fab6d58de__5[30] = 1;
+		outcome := settleNaturalBlackjack(game, playerScore, dealerScore)
+		game.Status = outcome.Status
+		game.CompletedAt = &now
+		finalBalance += outcome.Payout
+		nextXP += calculateXPReward("blackjack", game.BetAmount, outcome.Outcome, outcome.Status)
+		nextGamesPlayed++
+		historyEntry = buildBlackjackHistory(game, finalBalance, outcome)
+	}
+
+	goCover_f21fab6d58de__5[13] = 1;if err := a.insertBlackjackGame(r.Context(), tx, game); err != nil {goCover_f21fab6d58de__5[31] = 1;
+		writeError(w, http.StatusInternalServerError, "failed to create blackjack hand")
+		return
+	}
+
+	goCover_f21fab6d58de__5[14] = 1;if err := a.updateSessionBalance(r.Context(), tx, lockedSession.ID, finalBalance, nextXP, nextGamesPlayed, lockedSession.LastTopUpAt); err != nil {goCover_f21fab6d58de__5[32] = 1;
+		writeError(w, http.StatusInternalServerError, "failed to reserve blackjack bet")
+		return
+	}
+
+	goCover_f21fab6d58de__5[15] = 1;if historyEntry != nil {goCover_f21fab6d58de__5[33] = 1;
+		if err := a.insertBetHistory(r.Context(), tx, session.ID, historyEntry); err != nil {goCover_f21fab6d58de__5[36] = 1;
+			writeError(w, http.StatusInternalServerError, "failed to record blackjack result")
+			return
+		}
+
+		goCover_f21fab6d58de__5[34] = 1;if err := a.applyMissionProgressTx(r.Context(), tx, lockedSession.ID, missionProgressEvent{
+			Game:    "blackjack",
+			Outcome: historyEntry.Outcome,
+			Amount:  game.BetAmount,
+		}); err != nil {goCover_f21fab6d58de__5[37] = 1;
+			writeError(w, http.StatusInternalServerError, "failed to update missions")
+			return
+		}
+
+		goCover_f21fab6d58de__5[35] = 1;if err := a.sendNotificationTx(r.Context(), tx, lockedSession.ID, buildBlackjackNotification(*historyEntry)); err != nil {goCover_f21fab6d58de__5[38] = 1;
+			writeError(w, http.StatusInternalServerError, "failed to queue notification")
+			return
+		}
+	}
+
+	goCover_f21fab6d58de__5[16] = 1;if err := tx.Commit(r.Context()); err != nil {goCover_f21fab6d58de__5[39] = 1;
+		writeError(w, http.StatusInternalServerError, "failed to commit blackjack hand")
+		return
+	}
+
+	goCover_f21fab6d58de__5[17] = 1;currentSession, err := a.loadSession(r.Context(), lockedSession.ID)
+	if err != nil {goCover_f21fab6d58de__5[40] = 1;
+		writeError(w, http.StatusInternalServerError, "failed to refresh session")
+		return
+	}
+
+	goCover_f21fab6d58de__5[18] = 1;missions, err := a.loadDailyMissions(r.Context(), lockedSession.ID)
+	if err != nil {goCover_f21fab6d58de__5[41] = 1;
+		writeError(w, http.StatusInternalServerError, "failed to refresh missions")
+		return
+	}
+
+	goCover_f21fab6d58de__5[19] = 1;notifications, err := a.loadNotifications(r.Context(), lockedSession.ID, notificationLimit)
+	if err != nil {goCover_f21fab6d58de__5[42] = 1;
+		writeError(w, http.StatusInternalServerError, "failed to refresh notifications")
+		return
+	}
+
+	goCover_f21fab6d58de__5[20] = 1;writeJSON(w, http.StatusOK, blackjackActionResponse{
+		Session:       toSessionDTO(currentSession),
+		Blackjack:     toBlackjackGameState(game),
+		TopUp:         buildTopUpPolicy(currentSession.LastTopUpAt),
+		Missions:      missions,
+		Notifications: notifications,
+		HistoryEntry:  historyEntry,
+	})
+}
+
+func (a *application) handleBlackjackHit(w http.ResponseWriter, r *http.Request) {goCover_f21fab6d58de__6[0] = 1 ; goCover_f21fab6d58de__6[1] = goCover_f21fab6d58de_P ; goCover_f21fab6d58de__6[2] = 6 ; goCover_f21fab6d58de__6[3] = 1;
+	a.handleBlackjackAction(w, r, "hit")
+}
+
+func (a *application) handleBlackjackStand(w http.ResponseWriter, r *http.Request) {goCover_f21fab6d58de__7[0] = 1 ; goCover_f21fab6d58de__7[1] = goCover_f21fab6d58de_P ; goCover_f21fab6d58de__7[2] = 7 ; goCover_f21fab6d58de__7[3] = 1;
+	a.handleBlackjackAction(w, r, "stand")
+}
+
+func (a *application) handleBlackjackAction(w http.ResponseWriter, r *http.Request, action string) {goCover_f21fab6d58de__8[0] = 27 ; goCover_f21fab6d58de__8[1] = goCover_f21fab6d58de_P ; goCover_f21fab6d58de__8[2] = 8 ; goCover_f21fab6d58de__8[3] = 1;
+	session, err := a.ensureSession(w, r)
+	if err != nil {goCover_f21fab6d58de__8[14] = 1;
+		writeError(w, http.StatusInternalServerError, "failed to load session")
+		return
+	}
+
+	goCover_f21fab6d58de__8[4] = 1;tx, err := a.db.Begin(r.Context())
+	if err != nil {goCover_f21fab6d58de__8[15] = 1;
+		writeError(w, http.StatusInternalServerError, "failed to start transaction")
+		return
+	}
+	goCover_f21fab6d58de__8[5] = 1;defer tx.Rollback(r.Context())
+
+	game, err := a.loadActiveBlackjackTx(r.Context(), tx, session.ID)
+	if err != nil {goCover_f21fab6d58de__8[16] = 1;
+		writeError(w, http.StatusInternalServerError, "failed to load blackjack hand")
+		return
+	}
+	goCover_f21fab6d58de__8[6] = 1;if game == nil {goCover_f21fab6d58de__8[17] = 1;
+		writeError(w, http.StatusConflict, "there is no active blackjack hand")
+		return
+	}
+
+	goCover_f21fab6d58de__8[7] = 1;var historyEntry *betRecord
+	if action == "hit" {goCover_f21fab6d58de__8[18] = 1;
+		nextCard, nextDeck, drawErr := drawCard(game.Deck)
+		if drawErr != nil {goCover_f21fab6d58de__8[20] = 1;
+			writeError(w, http.StatusInternalServerError, "failed to draw blackjack card")
+			return
+		}
+		goCover_f21fab6d58de__8[19] = 1;game.PlayerCards = append(game.PlayerCards, nextCard)
+		game.Deck = nextDeck
+		game.UpdatedAt = time.Now().UTC()
+
+		playerScore := scoreBlackjackHand(game.PlayerCards)
+		switch {
+		case playerScore.IsBust:goCover_f21fab6d58de__8[21] = 1;
+			historyEntry, err = a.finishBlackjackHand(r.Context(), tx, session, game, blackjackOutcome{
+				Status:  "player_bust",
+				Message: "Bust. Dealer wins.",
+				Payout:  0,
+				Outcome: "loss",
+				Choice:  fmt.Sprintf("Player %d", playerScore.Total),
+				Result:  "Bust",
+			})
+		case playerScore.Total == 21:goCover_f21fab6d58de__8[22] = 1;
+			historyEntry, err = a.finishBlackjackHand(r.Context(), tx, session, game, settleDealerTurn(game))
+		default:goCover_f21fab6d58de__8[23] = 1;
+			err = a.updateBlackjackGame(r.Context(), tx, game)
+		}
+	} else{ goCover_f21fab6d58de__8[24] = 1;{
+		historyEntry, err = a.finishBlackjackHand(r.Context(), tx, session, game, settleDealerTurn(game))
+	}}
+
+	goCover_f21fab6d58de__8[8] = 1;if err != nil {goCover_f21fab6d58de__8[25] = 1;
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	goCover_f21fab6d58de__8[9] = 1;if err := tx.Commit(r.Context()); err != nil {goCover_f21fab6d58de__8[26] = 1;
+		writeError(w, http.StatusInternalServerError, "failed to commit blackjack action")
+		return
+	}
+
+	goCover_f21fab6d58de__8[10] = 1;currentSession, err := a.loadSession(r.Context(), session.ID)
+	if err != nil {goCover_f21fab6d58de__8[27] = 1;
+		writeError(w, http.StatusInternalServerError, "failed to refresh session")
+		return
+	}
+
+	goCover_f21fab6d58de__8[11] = 1;missions, err := a.loadDailyMissions(r.Context(), session.ID)
+	if err != nil {goCover_f21fab6d58de__8[28] = 1;
+		writeError(w, http.StatusInternalServerError, "failed to refresh missions")
+		return
+	}
+
+	goCover_f21fab6d58de__8[12] = 1;notifications, err := a.loadNotifications(r.Context(), session.ID, notificationLimit)
+	if err != nil {goCover_f21fab6d58de__8[29] = 1;
+		writeError(w, http.StatusInternalServerError, "failed to refresh notifications")
+		return
+	}
+
+	goCover_f21fab6d58de__8[13] = 1;writeJSON(w, http.StatusOK, blackjackActionResponse{
+		Session:       toSessionDTO(currentSession),
+		Blackjack:     toBlackjackGameState(game),
+		TopUp:         buildTopUpPolicy(currentSession.LastTopUpAt),
+		Missions:      missions,
+		Notifications: notifications,
+		HistoryEntry:  historyEntry,
+	})
+}
+
+func (a *application) finishBlackjackHand(
+	ctx context.Context,
+	tx pgx.Tx,
+	session sessionRecord,
+	game *blackjackGame,
+	outcome blackjackOutcome,
+) (*betRecord, error) {goCover_f21fab6d58de__9[0] = 13 ; goCover_f21fab6d58de__9[1] = goCover_f21fab6d58de_P ; goCover_f21fab6d58de__9[2] = 9 ; goCover_f21fab6d58de__9[3] = 1;
+	now := time.Now().UTC()
+	game.Status = outcome.Status
+	game.UpdatedAt = now
+	game.CompletedAt = &now
+
+	if err := a.updateBlackjackGame(ctx, tx, game); err != nil {goCover_f21fab6d58de__9[10] = 1;
+		return nil, fmt.Errorf("failed to update blackjack hand: %w", err)
+	}
+
+	goCover_f21fab6d58de__9[4] = 1;lockedSession, err := a.lockSession(ctx, tx, session.ID)
+	if err != nil {goCover_f21fab6d58de__9[11] = 1;
+		return nil, fmt.Errorf("failed to lock session: %w", err)
+	}
+
+	goCover_f21fab6d58de__9[5] = 1;finalBalance := lockedSession.Balance + outcome.Payout
+	nextXP := lockedSession.XP + calculateXPReward("blackjack", game.BetAmount, outcome.Outcome, outcome.Status)
+	nextGamesPlayed := lockedSession.GamesPlayed + 1
+	if err := a.updateSessionBalance(ctx, tx, lockedSession.ID, finalBalance, nextXP, nextGamesPlayed, lockedSession.LastTopUpAt); err != nil {goCover_f21fab6d58de__9[12] = 1;
+		return nil, fmt.Errorf("failed to settle session balance: %w", err)
+	}
+
+	goCover_f21fab6d58de__9[6] = 1;historyEntry := buildBlackjackHistory(game, finalBalance, outcome)
+	if err := a.insertBetHistory(ctx, tx, session.ID, historyEntry); err != nil {goCover_f21fab6d58de__9[13] = 1;
+		return nil, fmt.Errorf("failed to record blackjack history: %w", err)
+	}
+
+	goCover_f21fab6d58de__9[7] = 1;if err := a.applyMissionProgressTx(ctx, tx, session.ID, missionProgressEvent{
+		Game:    "blackjack",
+		Outcome: outcome.Outcome,
+		Amount:  game.BetAmount,
+	}); err != nil {goCover_f21fab6d58de__9[14] = 1;
+		return nil, fmt.Errorf("failed to update missions: %w", err)
+	}
+
+	goCover_f21fab6d58de__9[8] = 1;if err := a.sendNotificationTx(ctx, tx, session.ID, buildBlackjackNotification(*historyEntry)); err != nil {goCover_f21fab6d58de__9[15] = 1;
+		return nil, fmt.Errorf("failed to queue notification: %w", err)
+	}
+
+	goCover_f21fab6d58de__9[9] = 1;return historyEntry, nil
+}
+
+func (a *application) loadActiveBlackjack(ctx context.Context, sessionID string) (*blackjackGameState, error) {goCover_f21fab6d58de__10[0] = 3 ; goCover_f21fab6d58de__10[1] = goCover_f21fab6d58de_P ; goCover_f21fab6d58de__10[2] = 10 ; goCover_f21fab6d58de__10[3] = 1;
+	game, err := a.loadActiveBlackjackRecord(ctx, a.db, sessionID)
+	if err != nil {goCover_f21fab6d58de__10[5] = 1;
+		return nil, err
+	}
+	goCover_f21fab6d58de__10[4] = 1;return toBlackjackGameState(game), nil
+}
+
+func (a *application) loadActiveBlackjackTx(ctx context.Context, tx pgx.Tx, sessionID string) (*blackjackGame, error) {goCover_f21fab6d58de__11[0] = 1 ; goCover_f21fab6d58de__11[1] = goCover_f21fab6d58de_P ; goCover_f21fab6d58de__11[2] = 11 ; goCover_f21fab6d58de__11[3] = 1;
+	query := `SELECT id, session_id, bet_amount, deck, player_cards, dealer_cards, status, created_at, updated_at, completed_at
+        FROM blackjack_games
+        WHERE session_id = $1 AND status = 'active'
+        ORDER BY created_at DESC
+        LIMIT 1
+        FOR UPDATE`
+
+	return scanBlackjackGame(tx.QueryRow(ctx, query, sessionID))
+}
+
+type blackjackQueryer interface {
+	QueryRow(context.Context, string, ...any) pgx.Row
+}
+
+func (a *application) loadActiveBlackjackRecord(ctx context.Context, queryer blackjackQueryer, sessionID string) (*blackjackGame, error) {goCover_f21fab6d58de__12[0] = 1 ; goCover_f21fab6d58de__12[1] = goCover_f21fab6d58de_P ; goCover_f21fab6d58de__12[2] = 12 ; goCover_f21fab6d58de__12[3] = 1;
+	query := `SELECT id, session_id, bet_amount, deck, player_cards, dealer_cards, status, created_at, updated_at, completed_at
+        FROM blackjack_games
+        WHERE session_id = $1 AND status = 'active'
+        ORDER BY created_at DESC
+        LIMIT 1`
+	return scanBlackjackGame(queryer.QueryRow(ctx, query, sessionID))
+}
+
+func scanBlackjackGame(row pgx.Row) (*blackjackGame, error) {goCover_f21fab6d58de__13[0] = 11 ; goCover_f21fab6d58de__13[1] = goCover_f21fab6d58de_P ; goCover_f21fab6d58de__13[2] = 13 ; goCover_f21fab6d58de__13[3] = 1;
+	var game blackjackGame
+	var deckJSON []byte
+	var playerJSON []byte
+	var dealerJSON []byte
+	err := row.Scan(
+		&game.ID,
+		&game.SessionID,
+		&game.BetAmount,
+		&deckJSON,
+		&playerJSON,
+		&dealerJSON,
+		&game.Status,
+		&game.CreatedAt,
+		&game.UpdatedAt,
+		&game.CompletedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {goCover_f21fab6d58de__13[9] = 1;
+		return nil, nil
+	}
+	goCover_f21fab6d58de__13[4] = 1;if err != nil {goCover_f21fab6d58de__13[10] = 1;
+		return nil, err
+	}
+
+	goCover_f21fab6d58de__13[5] = 1;if err := json.Unmarshal(deckJSON, &game.Deck); err != nil {goCover_f21fab6d58de__13[11] = 1;
+		return nil, err
+	}
+	goCover_f21fab6d58de__13[6] = 1;if err := json.Unmarshal(playerJSON, &game.PlayerCards); err != nil {goCover_f21fab6d58de__13[12] = 1;
+		return nil, err
+	}
+	goCover_f21fab6d58de__13[7] = 1;if err := json.Unmarshal(dealerJSON, &game.DealerCards); err != nil {goCover_f21fab6d58de__13[13] = 1;
+		return nil, err
+	}
+
+	goCover_f21fab6d58de__13[8] = 1;return &game, nil
+}
+
+func (a *application) insertBlackjackGame(ctx context.Context, tx pgx.Tx, game *blackjackGame) error {goCover_f21fab6d58de__14[0] = 7 ; goCover_f21fab6d58de__14[1] = goCover_f21fab6d58de_P ; goCover_f21fab6d58de__14[2] = 14 ; goCover_f21fab6d58de__14[3] = 1;
+	deckJSON, err := json.Marshal(game.Deck)
+	if err != nil {goCover_f21fab6d58de__14[7] = 1;
+		return err
+	}
+	goCover_f21fab6d58de__14[4] = 1;playerJSON, err := json.Marshal(game.PlayerCards)
+	if err != nil {goCover_f21fab6d58de__14[8] = 1;
+		return err
+	}
+	goCover_f21fab6d58de__14[5] = 1;dealerJSON, err := json.Marshal(game.DealerCards)
+	if err != nil {goCover_f21fab6d58de__14[9] = 1;
+		return err
+	}
+
+	goCover_f21fab6d58de__14[6] = 1;_, err = tx.Exec(
+		ctx,
+		`INSERT INTO blackjack_games (id, session_id, bet_amount, deck, player_cards, dealer_cards, status, created_at, updated_at, completed_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+		game.ID,
+		game.SessionID,
+		game.BetAmount,
+		deckJSON,
+		playerJSON,
+		dealerJSON,
+		game.Status,
+		game.CreatedAt,
+		game.UpdatedAt,
+		game.CompletedAt,
+	)
+	return err
+}
+
+func (a *application) updateBlackjackGame(ctx context.Context, tx pgx.Tx, game *blackjackGame) error {goCover_f21fab6d58de__15[0] = 7 ; goCover_f21fab6d58de__15[1] = goCover_f21fab6d58de_P ; goCover_f21fab6d58de__15[2] = 15 ; goCover_f21fab6d58de__15[3] = 1;
+	deckJSON, err := json.Marshal(game.Deck)
+	if err != nil {goCover_f21fab6d58de__15[7] = 1;
+		return err
+	}
+	goCover_f21fab6d58de__15[4] = 1;playerJSON, err := json.Marshal(game.PlayerCards)
+	if err != nil {goCover_f21fab6d58de__15[8] = 1;
+		return err
+	}
+	goCover_f21fab6d58de__15[5] = 1;dealerJSON, err := json.Marshal(game.DealerCards)
+	if err != nil {goCover_f21fab6d58de__15[9] = 1;
+		return err
+	}
+
+	goCover_f21fab6d58de__15[6] = 1;_, err = tx.Exec(
+		ctx,
+		`UPDATE blackjack_games
+         SET deck = $2,
+             player_cards = $3,
+             dealer_cards = $4,
+             status = $5,
+             updated_at = $6,
+             completed_at = $7
+         WHERE id = $1`,
+		game.ID,
+		deckJSON,
+		playerJSON,
+		dealerJSON,
+		game.Status,
+		game.UpdatedAt,
+		game.CompletedAt,
+	)
+	return err
+}
+
+func (a *application) lockSession(ctx context.Context, tx pgx.Tx, sessionID string) (sessionRecord, error) {goCover_f21fab6d58de__16[0] = 1 ; goCover_f21fab6d58de__16[1] = goCover_f21fab6d58de_P ; goCover_f21fab6d58de__16[2] = 16 ; goCover_f21fab6d58de__16[3] = 1;
+	var session sessionRecord
+	err := tx.QueryRow(
+		ctx,
+		`SELECT id, balance, xp, games_played, created_at, last_top_up_at FROM sessions WHERE id = $1 FOR UPDATE`,
+		sessionID,
+	).Scan(&session.ID, &session.Balance, &session.XP, &session.GamesPlayed, &session.CreatedAt, &session.LastTopUpAt)
+	return session, err
+}
+
+func (a *application) loadSessionTx(ctx context.Context, tx pgx.Tx, sessionID string) (sessionRecord, error) {goCover_f21fab6d58de__17[0] = 1 ; goCover_f21fab6d58de__17[1] = goCover_f21fab6d58de_P ; goCover_f21fab6d58de__17[2] = 17 ; goCover_f21fab6d58de__17[3] = 1;
+	var session sessionRecord
+	err := tx.QueryRow(
+		ctx,
+		`SELECT id, balance, xp, games_played, created_at, last_top_up_at FROM sessions WHERE id = $1`,
+		sessionID,
+	).Scan(&session.ID, &session.Balance, &session.XP, &session.GamesPlayed, &session.CreatedAt, &session.LastTopUpAt)
+	return session, err
+}
+
+func (a *application) updateSessionBalance(
+	ctx context.Context,
+	tx pgx.Tx,
+	sessionID string,
+	balance int64,
+	xp int64,
+	gamesPlayed int64,
+	lastTopUpAt *time.Time,
+) error {goCover_f21fab6d58de__18[0] = 1 ; goCover_f21fab6d58de__18[1] = goCover_f21fab6d58de_P ; goCover_f21fab6d58de__18[2] = 18 ; goCover_f21fab6d58de__18[3] = 1;
+	_, err := tx.Exec(
+		ctx,
+		`UPDATE sessions
+         SET balance = $2,
+             xp = $3,
+             games_played = $4,
+             updated_at = NOW(),
+             last_top_up_at = $5
+         WHERE id = $1`,
+		sessionID,
+		balance,
+		xp,
+		gamesPlayed,
+		lastTopUpAt,
+	)
+	return err
+}
+
+func (a *application) insertBetHistory(ctx context.Context, tx pgx.Tx, sessionID string, record *betRecord) error {goCover_f21fab6d58de__19[0] = 1 ; goCover_f21fab6d58de__19[1] = goCover_f21fab6d58de_P ; goCover_f21fab6d58de__19[2] = 19 ; goCover_f21fab6d58de__19[3] = 1;
+	_, err := tx.Exec(
+		ctx,
+		`INSERT INTO bets (id, session_id, game, choice, result, amount, outcome, balance_after, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+		record.ID,
+		sessionID,
+		record.Game,
+		record.Choice,
+		record.Result,
+		record.Amount,
+		record.Outcome,
+		record.BalanceAfter,
+		record.Timestamp,
+	)
+	return err
+}
+
+func toBlackjackGameState(game *blackjackGame) *blackjackGameState {goCover_f21fab6d58de__20[0] = 5 ; goCover_f21fab6d58de__20[1] = goCover_f21fab6d58de_P ; goCover_f21fab6d58de__20[2] = 20 ; goCover_f21fab6d58de__20[3] = 1;
+	if game == nil {goCover_f21fab6d58de__20[6] = 1;
+		return nil
+	}
+
+	goCover_f21fab6d58de__20[4] = 1;playerScore := scoreBlackjackHand(game.PlayerCards)
+	isComplete := game.Status != "active"
+	dealerCards := game.DealerCards
+	dealerTotal := scoreBlackjackHand(game.DealerCards).Total
+	hiddenCount := 0
+
+	if !isComplete && len(game.DealerCards) > 0 {goCover_f21fab6d58de__20[7] = 1;
+		dealerCards = game.DealerCards[:1]
+		dealerTotal = scoreBlackjackHand(dealerCards).Total
+		hiddenCount = len(game.DealerCards) - 1
+	}
+
+	goCover_f21fab6d58de__20[5] = 1;return &blackjackGameState{
+		ID:                game.ID,
+		BetAmount:         game.BetAmount,
+		PlayerCards:       game.PlayerCards,
+		DealerCards:       dealerCards,
+		DealerHiddenCount: hiddenCount,
+		PlayerTotal:       playerScore.Total,
+		DealerTotal:       dealerTotal,
+		Status:            game.Status,
+		Message:           blackjackStatusMessage(game.Status),
+		CanHit:            !isComplete,
+		CanStand:          !isComplete,
+		IsComplete:        isComplete,
+		CompletedAt:       game.CompletedAt,
+	}
+}
+
+func blackjackStatusMessage(status string) string {goCover_f21fab6d58de__21[0] = 8 ; goCover_f21fab6d58de__21[1] = goCover_f21fab6d58de_P ; goCover_f21fab6d58de__21[2] = 21 ; goCover_f21fab6d58de__21[3] = 1;
+	switch status {
+	case "blackjack":goCover_f21fab6d58de__21[4] = 1;
+		return "Blackjack pays 3:2."
+	case "player_bust":goCover_f21fab6d58de__21[5] = 1;
+		return "Bust. Dealer wins."
+	case "dealer_bust":goCover_f21fab6d58de__21[6] = 1;
+		return "Dealer busts. You win."
+	case "player_win":goCover_f21fab6d58de__21[7] = 1;
+		return "You beat the dealer."
+	case "dealer_win":goCover_f21fab6d58de__21[8] = 1;
+		return "Dealer wins the hand."
+	case "push":goCover_f21fab6d58de__21[9] = 1;
+		return "Push. Your bet is returned."
+	default:goCover_f21fab6d58de__21[10] = 1;
+		return "Hit or stand."
+	}
+}
+
+func settleNaturalBlackjack(game *blackjackGame, playerScore, dealerScore blackjackScore) blackjackOutcome {goCover_f21fab6d58de__22[0] = 4 ; goCover_f21fab6d58de__22[1] = goCover_f21fab6d58de_P ; goCover_f21fab6d58de__22[2] = 22 ; goCover_f21fab6d58de__22[3] = 1;
+	switch {
+	case playerScore.IsBlackjack && dealerScore.IsBlackjack:goCover_f21fab6d58de__22[4] = 1;
+		return blackjackOutcome{
+			Status:  "push",
+			Message: "Both sides have blackjack. Push.",
+			Payout:  game.BetAmount,
+			Outcome: "push",
+			Choice:  "Player blackjack",
+			Result:  "Dealer blackjack",
+		}
+	case playerScore.IsBlackjack:goCover_f21fab6d58de__22[5] = 1;
+		return blackjackOutcome{
+			Status:  "blackjack",
+			Message: "Blackjack pays 3:2.",
+			Payout:  (game.BetAmount * 5) / 2,
+			Outcome: "win",
+			Choice:  "Player blackjack",
+			Result:  fmt.Sprintf("Dealer %d", dealerScore.Total),
+		}
+	default:goCover_f21fab6d58de__22[6] = 1;
+		return blackjackOutcome{
+			Status:  "dealer_win",
+			Message: "Dealer blackjack.",
+			Payout:  0,
+			Outcome: "loss",
+			Choice:  fmt.Sprintf("Player %d", playerScore.Total),
+			Result:  "Dealer blackjack",
+		}
+	}
+}
+
+func settleDealerTurn(game *blackjackGame) blackjackOutcome {goCover_f21fab6d58de__23[0] = 9 ; goCover_f21fab6d58de__23[1] = goCover_f21fab6d58de_P ; goCover_f21fab6d58de__23[2] = 23 ; goCover_f21fab6d58de__23[3] = 1;
+	for scoreBlackjackHand(game.DealerCards).Total < 17 {goCover_f21fab6d58de__23[5] = 1;
+		card, nextDeck, err := drawCard(game.Deck)
+		if err != nil {goCover_f21fab6d58de__23[7] = 1;
+			return blackjackOutcome{
+				Status:  "dealer_win",
+				Message: "Dealer wins the hand.",
+				Payout:  0,
+				Outcome: "loss",
+				Choice:  fmt.Sprintf("Player %d", scoreBlackjackHand(game.PlayerCards).Total),
+				Result:  "Dealer draw failed",
+			}
+		}
+		goCover_f21fab6d58de__23[6] = 1;game.DealerCards = append(game.DealerCards, card)
+		game.Deck = nextDeck
+	}
+
+	goCover_f21fab6d58de__23[4] = 1;playerScore := scoreBlackjackHand(game.PlayerCards)
+	dealerScore := scoreBlackjackHand(game.DealerCards)
+
+	switch {
+	case dealerScore.IsBust:goCover_f21fab6d58de__23[8] = 1;
+		return blackjackOutcome{
+			Status:  "dealer_bust",
+			Message: "Dealer busts. You win.",
+			Payout:  game.BetAmount * 2,
+			Outcome: "win",
+			Choice:  fmt.Sprintf("Player %d", playerScore.Total),
+			Result:  "Dealer bust",
+		}
+	case playerScore.Total > dealerScore.Total:goCover_f21fab6d58de__23[9] = 1;
+		return blackjackOutcome{
+			Status:  "player_win",
+			Message: "You beat the dealer.",
+			Payout:  game.BetAmount * 2,
+			Outcome: "win",
+			Choice:  fmt.Sprintf("Player %d", playerScore.Total),
+			Result:  fmt.Sprintf("Dealer %d", dealerScore.Total),
+		}
+	case playerScore.Total == dealerScore.Total:goCover_f21fab6d58de__23[10] = 1;
+		return blackjackOutcome{
+			Status:  "push",
+			Message: "Push. Your bet is returned.",
+			Payout:  game.BetAmount,
+			Outcome: "push",
+			Choice:  fmt.Sprintf("Player %d", playerScore.Total),
+			Result:  fmt.Sprintf("Dealer %d", dealerScore.Total),
+		}
+	default:goCover_f21fab6d58de__23[11] = 1;
+		return blackjackOutcome{
+			Status:  "dealer_win",
+			Message: "Dealer wins the hand.",
+			Payout:  0,
+			Outcome: "loss",
+			Choice:  fmt.Sprintf("Player %d", playerScore.Total),
+			Result:  fmt.Sprintf("Dealer %d", dealerScore.Total),
+		}
+	}
+}
+
+func buildBlackjackHistory(game *blackjackGame, balanceAfter int64, outcome blackjackOutcome) *betRecord {goCover_f21fab6d58de__24[0] = 1 ; goCover_f21fab6d58de__24[1] = goCover_f21fab6d58de_P ; goCover_f21fab6d58de__24[2] = 24 ; goCover_f21fab6d58de__24[3] = 1;
+	return &betRecord{
+		ID:           mustRandomToken(16),
+		Game:         "Blackjack",
+		Choice:       outcome.Choice,
+		Result:       outcome.Result,
+		Amount:       game.BetAmount,
+		Outcome:      outcome.Outcome,
+		BalanceAfter: balanceAfter,
+		Timestamp:    time.Now().UTC(),
+	}
+}
+
+func buildBlackjackNotification(history betRecord) notificationInput {goCover_f21fab6d58de__25[0] = 4 ; goCover_f21fab6d58de__25[1] = goCover_f21fab6d58de_P ; goCover_f21fab6d58de__25[2] = 25 ; goCover_f21fab6d58de__25[3] = 1;
+	switch history.Outcome {
+	case "win":goCover_f21fab6d58de__25[4] = 1;
+		return notificationInput{
+			Category: "notification",
+			Severity: "success",
+			Title:    "Blackjack hand won",
+			Message:  fmt.Sprintf("%s resolved in your favor for a %d credit hand.", history.Result, history.Amount),
+		}
+	case "push":goCover_f21fab6d58de__25[5] = 1;
+		return notificationInput{
+			Category: "notification",
+			Severity: "info",
+			Title:    "Blackjack hand pushed",
+			Message:  fmt.Sprintf("Your %d credit blackjack hand ended in a push.", history.Amount),
+		}
+	default:goCover_f21fab6d58de__25[6] = 1;
+		return notificationInput{
+			Category: "notification",
+			Severity: "warning",
+			Title:    "Blackjack hand lost",
+			Message:  fmt.Sprintf("The dealer closed out your %d credit hand.", history.Amount),
+		}
+	}
+}
+
+func shuffledDeck() ([]blackjackCard, error) {goCover_f21fab6d58de__26[0] = 8 ; goCover_f21fab6d58de__26[1] = goCover_f21fab6d58de_P ; goCover_f21fab6d58de__26[2] = 26 ; goCover_f21fab6d58de__26[3] = 1;
+	deck := make([]blackjackCard, 0, 52)
+	suits := []string{"spades", "hearts", "diamonds", "clubs"}
+	ranks := []string{"A", "K", "Q", "J", "10", "9", "8", "7", "6", "5", "4", "3", "2"}
+
+	for _, suit := range suits {goCover_f21fab6d58de__26[6] = 1;
+		for _, rank := range ranks {goCover_f21fab6d58de__26[7] = 1;
+			deck = append(deck, blackjackCard{Rank: rank, Suit: suit})
+		}
+	}
+
+	goCover_f21fab6d58de__26[4] = 1;for i := len(deck) - 1; i > 0; i-- {goCover_f21fab6d58de__26[8] = 1;
+		n, err := rand.Int(rand.Reader, big.NewInt(int64(i+1)))
+		if err != nil {goCover_f21fab6d58de__26[10] = 1;
+			return nil, err
+		}
+		goCover_f21fab6d58de__26[9] = 1;j := int(n.Int64())
+		deck[i], deck[j] = deck[j], deck[i]
+	}
+
+	goCover_f21fab6d58de__26[5] = 1;return deck, nil
+}
+
+func drawCards(deck []blackjackCard, count int) ([]blackjackCard, []blackjackCard) {goCover_f21fab6d58de__27[0] = 5 ; goCover_f21fab6d58de__27[1] = goCover_f21fab6d58de_P ; goCover_f21fab6d58de__27[2] = 27 ; goCover_f21fab6d58de__27[3] = 1;
+	drawn := make([]blackjackCard, 0, count)
+	for i := 0; i < count; i++ {goCover_f21fab6d58de__27[5] = 1;
+		card, nextDeck, err := drawCard(deck)
+		if err != nil {goCover_f21fab6d58de__27[7] = 1;
+			break
+		}
+		goCover_f21fab6d58de__27[6] = 1;drawn = append(drawn, card)
+		deck = nextDeck
+	}
+	goCover_f21fab6d58de__27[4] = 1;return drawn, deck
+}
+
+func drawCard(deck []blackjackCard) (blackjackCard, []blackjackCard, error) {goCover_f21fab6d58de__28[0] = 3 ; goCover_f21fab6d58de__28[1] = goCover_f21fab6d58de_P ; goCover_f21fab6d58de__28[2] = 28 ; goCover_f21fab6d58de__28[3] = 1;
+	if len(deck) == 0 {goCover_f21fab6d58de__28[5] = 1;
+		return blackjackCard{}, nil, errors.New("deck is empty")
+	}
+	goCover_f21fab6d58de__28[4] = 1;return deck[0], deck[1:], nil
+}
+
+func scoreBlackjackHand(cards []blackjackCard) blackjackScore {goCover_f21fab6d58de__29[0] = 8 ; goCover_f21fab6d58de__29[1] = goCover_f21fab6d58de_P ; goCover_f21fab6d58de__29[2] = 29 ; goCover_f21fab6d58de__29[3] = 1;
+	total := 0
+	aces := 0
+
+	for _, card := range cards {goCover_f21fab6d58de__29[6] = 1;
+		switch card.Rank {
+		case "A":goCover_f21fab6d58de__29[7] = 1;
+			total += 11
+			aces++
+		case "K", "Q", "J", "10":goCover_f21fab6d58de__29[8] = 1;
+			total += 10
+		default:goCover_f21fab6d58de__29[9] = 1;
+			var value int
+			fmt.Sscanf(card.Rank, "%d", &value)
+			total += value
+		}
+	}
+
+	goCover_f21fab6d58de__29[4] = 1;for total > 21 && aces > 0 {goCover_f21fab6d58de__29[10] = 1;
+		total -= 10
+		aces--
+	}
+
+	goCover_f21fab6d58de__29[5] = 1;return blackjackScore{
+		Total:       total,
+		IsSoft:      aces > 0,
+		IsBust:      total > 21,
+		IsBlackjack: len(cards) == 2 && total == 21,
+	}
+}

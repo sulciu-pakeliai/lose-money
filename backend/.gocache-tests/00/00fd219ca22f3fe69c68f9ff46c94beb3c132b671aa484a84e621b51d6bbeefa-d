@@ -1,0 +1,5 @@
+# test log
+getenv LM_TEST_VALUE
+getenv LM_TEST_VALUE
+getenv LM_TEST_EMPTY
+getenv LM_TEST_EMPTY
