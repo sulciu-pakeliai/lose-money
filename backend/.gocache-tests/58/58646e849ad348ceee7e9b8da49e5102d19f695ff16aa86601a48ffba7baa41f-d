@@ -1,9 +1,0 @@
-./auth.go
-./blackjack.go
-./main.go
-./missions.go
-./notifications.go
-./auth_test.go
-./blackjack_test.go
-./main_test.go
-./missions_notifications_http_test.go
