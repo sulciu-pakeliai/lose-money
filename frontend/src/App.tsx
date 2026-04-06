@@ -34,6 +34,7 @@ import { SignInModal } from "./components/SignInModal";
 import { Profile } from "./components/Profile";
 import { NotificationsCenter } from "./components/NotificationsCenter";
 import { AchievementUnlockToasts } from "./components/AchievementUnlockToasts";
+import { VisualAvatar } from "./components/VisualAvatar";
 
 type View = "lobby" | "missions" | "achievements" | "coinflip" | "blackjack" | "history" | "topup" | "profile" | "notifications";
 
@@ -407,6 +408,14 @@ export function App() {
                     );
                 }}
             />
+            {!showAuthModal && !showSignInModal && (
+                <VisualAvatar
+                    isLoading={isLoading}
+                    loadingError={loadingError}
+                    state={state}
+                    view={view}
+                />
+            )}
         </div>
     );
 }
