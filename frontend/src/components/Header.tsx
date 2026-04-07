@@ -1,4 +1,5 @@
 import type { Session } from "../lib/session";
+import { SessionTimer } from "./SessionTimer";
 
 type HeaderProps = {
     session: Session | null;
@@ -72,7 +73,7 @@ export function Header({
                                 <p className="font-display text-xl tracking-wide">LoseMoney</p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-wrap items-center justify-end gap-3">
                             <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.2em] text-slate-300/80">
                                 Balance
                                 <span className="ml-3 font-display text-base text-white">₵ {formatNumber(balance)}</span>
@@ -86,6 +87,18 @@ export function Header({
                             </button>
                         </div>
                     </div>
+
+                    {session && (
+                        <div className="flex justify-start">
+                            <div className="rounded-2xl border border-cyan-300/15 bg-cyan-400/8 px-4 py-3 text-left">
+                                <SessionTimer
+                                    createdAt={session.createdAt}
+                                    labelClassName="text-[10px] uppercase tracking-[0.24em] text-cyan-100/65"
+                                    valueClassName="mt-1 font-display text-lg text-cyan-50"
+                                />
+                            </div>
+                        </div>
+                    )}
 
                     <nav
                         className="mt-auto flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2"
@@ -175,9 +188,11 @@ export function Header({
                             <h2 className="mt-1 font-display text-4xl leading-none text-white">{level}</h2>
                             <p className="mt-2 text-xs uppercase tracking-[0.18em] text-amber-50/70">{formatNumber(xp)} XP</p>
                         </div>
-                        <div className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-right">
-                            <p className="text-[10px] uppercase tracking-[0.24em] text-amber-100/60">Games</p>
-                            <p className="mt-1 font-display text-2xl text-white">{formatNumber(gamesPlayed)}</p>
+                        <div className="grid gap-3 text-right">
+                            <div className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2">
+                                <p className="text-[10px] uppercase tracking-[0.24em] text-amber-100/60">Games</p>
+                                <p className="mt-1 font-display text-2xl text-white">{formatNumber(gamesPlayed)}</p>
+                            </div>
                         </div>
                     </div>
 

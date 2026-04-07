@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchProfile, type ProfileStats, type Session } from "../lib/session";
+import { SessionTimer } from "./SessionTimer";
 
 type ProfileProps = {
   session: Session;
@@ -34,6 +35,14 @@ export function Profile({ session }: ProfileProps) {
           <Stat label="Total XP" value={formatNumber(session.xp)} />
           <Stat label="Games Played" value={formatNumber(session.gamesPlayed)} />
           <Stat label="Balance" value={`₵ ${formatNumber(session.balance)}`} />
+        </div>
+
+        <div className="mt-4 rounded-2xl border border-cyan-300/15 bg-cyan-400/8 px-4 py-3">
+          <SessionTimer
+            createdAt={session.createdAt}
+            labelClassName="text-[10px] uppercase tracking-[0.25em] text-cyan-100/65"
+            valueClassName="mt-1 font-display text-2xl text-cyan-50"
+          />
         </div>
 
         {/* XP progress bar */}
