@@ -14,6 +14,7 @@ const (
 	achievementMetricWager             = "wager_total"
 	achievementMetricSingleBet         = "single_bet"
 	achievementMetricNaturalBlackjacks = "natural_blackjacks"
+	achievementMetricLuckySevens       = "lucky_sevens"
 )
 
 type achievementTemplate struct {
@@ -174,6 +175,32 @@ var achievementTemplates = []achievementTemplate{
 		Accent:      "gold",
 		IconLabel:   "BJ",
 		Metric:      achievementMetricNaturalBlackjacks,
+		Target:      1,
+	},
+	{
+		SortOrder:   8,
+		TemplateKey: "bones_regular",
+		GroupName:   "Lucky 7",
+		Title:       "Bones Regular",
+		Description: "Play 5 rounds of Lucky 7.",
+		GameScope:   missionScopeDice,
+		Rarity:      "common",
+		Accent:      "cyan",
+		IconLabel:   "D6",
+		Metric:      achievementMetricRounds,
+		Target:      5,
+	},
+	{
+		SortOrder:   9,
+		TemplateKey: "true_seven",
+		GroupName:   "Lucky 7",
+		Title:       "True Seven",
+		Description: "Hit an exact Lucky 7 payout.",
+		GameScope:   missionScopeDice,
+		Rarity:      "epic",
+		Accent:      "gold",
+		IconLabel:   "7",
+		Metric:      achievementMetricLuckySevens,
 		Target:      1,
 	},
 }
@@ -378,6 +405,11 @@ func nextAchievementProgress(record achievementRecord, event achievementProgress
 		return minAchievementProgress(event.Amount, record.Target), true
 	case achievementMetricNaturalBlackjacks:
 		if event.Game != missionScopeBlackjack || event.Status != "blackjack" {
+			return record.Progress, false
+		}
+		return minAchievementProgress(record.Progress+1, record.Target), true
+	case achievementMetricLuckySevens:
+		if event.Game != missionScopeDice || event.Status != "exact_seven" {
 			return record.Progress, false
 		}
 		return minAchievementProgress(record.Progress+1, record.Target), true

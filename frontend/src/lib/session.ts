@@ -1,4 +1,5 @@
 export type CoinSide = "Heads" | "Tails";
+export type DiceBetType = "low" | "high" | "lucky7";
 
 export type Session = {
     id: string;
@@ -19,11 +20,20 @@ export type BetRecord = {
     id: string;
     game: string;
     choice: string;
-    result: CoinSide;
+    result: string;
     amount: number;
     outcome: "win" | "loss" | "push";
     balanceAfter: number;
     timestamp: string;
+};
+
+export type DiceRollSummary = {
+    dieOne: number;
+    dieTwo: number;
+    total: number;
+    betType: DiceBetType;
+    profitMultiplier: number;
+    won: boolean;
 };
 
 export type TopUpPolicy = {
@@ -59,7 +69,7 @@ export type Mission = {
     groupName: string;
     title: string;
     description: string;
-    gameScope: "all" | "coinflip" | "blackjack";
+    gameScope: "all" | "coinflip" | "blackjack" | "dice";
     target: number;
     progress: number;
     rewardBalance: number;
@@ -76,7 +86,7 @@ export type Achievement = {
     groupName: string;
     title: string;
     description: string;
-    gameScope: "all" | "coinflip" | "blackjack";
+    gameScope: "all" | "coinflip" | "blackjack" | "dice";
     rarity: "common" | "uncommon" | "rare" | "epic";
     accent: "copper" | "cyan" | "emerald" | "rose" | "gold";
     iconLabel: string;
@@ -110,6 +120,16 @@ export type AppState = {
 export type CoinFlipResult = {
     session: Session;
     bet: BetRecord;
+    topUp: TopUpPolicy;
+    missions: Mission[];
+    achievements: Achievement[];
+    notifications: AppNotification[];
+};
+
+export type DiceRollResult = {
+    session: Session;
+    bet: BetRecord;
+    roll: DiceRollSummary;
     topUp: TopUpPolicy;
     missions: Mission[];
     achievements: Achievement[];
@@ -199,6 +219,16 @@ export async function claimTopUp(amount: number): Promise<TopUpResult> {
             "Content-Type": "application/json",
         },
         body: JSON.stringify({ amount }),
+    });
+}
+
+export async function submitDiceRoll(betType: DiceBetType, amount: number): Promise<DiceRollResult> {
+    return apiFetch<DiceRollResult>("/api/dice", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ betType, amount }),
     });
 }
 

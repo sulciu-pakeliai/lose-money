@@ -156,6 +156,7 @@ func main() {
 	mux.HandleFunc("GET /api/notifications", app.handleNotifications)
 	mux.HandleFunc("POST /api/notifications/read", app.handleNotificationsRead)
 	mux.HandleFunc("POST /api/coinflip", app.handleCoinFlip)
+	mux.HandleFunc("POST /api/dice", app.handleDiceRoll)
 	mux.HandleFunc("POST /api/top-up", app.handleTopUp)
 	mux.HandleFunc("POST /api/missions/claim", app.handleMissionClaim)
 	mux.HandleFunc("POST /api/blackjack/start", app.handleBlackjackStart)
@@ -886,6 +887,8 @@ func calculateXPReward(game string, amount int64, outcome string, status string)
 		if status == "blackjack" {
 			statusBonus = 30
 		}
+	} else if game == "dice" && status == "exact_seven" {
+		statusBonus = 18
 	}
 
 	return base + volumeBonus + outcomeBonus + statusBonus

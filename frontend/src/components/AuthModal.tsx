@@ -52,7 +52,7 @@ export function AuthModal({ initialView = "choose", onContinueAsGuest, onAuthSuc
 
     return (
         <div className="rules-backdrop fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 py-8 backdrop-blur-sm">
-            <div className="w-full max-w-md overflow-hidden rounded-[1.5rem] border border-white/10 bg-[linear-gradient(180deg,rgba(15,23,42,0.96),rgba(2,6,23,0.96))] shadow-[0_40px_120px_rgba(2,6,23,0.6)]">
+            <div className="w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(15,23,42,0.96),rgba(2,6,23,0.96))] shadow-[0_40px_120px_rgba(2,6,23,0.6)]">
                 <div className="border-b border-white/10 px-6 py-6">
                     <p className="text-xs uppercase tracking-[0.32em] text-cyan-200/70">Account</p>
                     <h2 className="mt-2 font-display text-2xl text-white">Welcome to LoseMoney</h2>

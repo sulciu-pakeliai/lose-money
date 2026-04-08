@@ -13,6 +13,7 @@ type AvatarView =
     | "missions"
     | "achievements"
     | "coinflip"
+    | "dice"
     | "blackjack"
     | "history"
     | "topup"
@@ -101,6 +102,18 @@ function getScene({
                 { emotion: "neutral", animation: "talk", line: "Call it early and stick to the story. Confidence matters more than evidence.", durationMs: 6600 },
                 { emotion: "happy", animation: "talk", line: "Pick one and make it sound inevitable. The coin loves commitment.", durationMs: 6200 },
                 { emotion: "surprised", animation: "react", line: "If you win, I meant this. If you lose, I was testing your independence.", durationMs: 6800 },
+            ],
+        };
+    }
+
+    if (view === "dice") {
+        return {
+            signature: `dice-${state.session.balance}-${claimableMissions}`,
+            beats: [
+                { emotion: "happy", animation: "talk", line: "Dice table is live. Low is safe, Lucky 7 is dramatic.", durationMs: 5600 },
+                { emotion: "surprised", animation: "react", line: "Seven sits in the middle like trouble wearing perfume.", durationMs: 5800 },
+                { emotion: "neutral", animation: "talk", line: "If you call Lucky 7, do it because you mean it, not because the button looks good.", durationMs: 6800 },
+                { emotion: "happy", animation: "talk", line: "Two dice, one decision, immediate consequences. Efficient.", durationMs: 5600 },
             ],
         };
     }
@@ -220,7 +233,7 @@ function getScene({
         signature: "lobby",
         beats: [
             { emotion: "neutral", animation: "idle", line: "I will keep an eye on the room while you choose a game.", durationMs: 6200 },
-            { emotion: "happy", animation: "talk", line: "Coinflip is quick. Blackjack is classy. Pick your poison.", durationMs: 6200 },
+            { emotion: "happy", animation: "talk", line: "Coinflip is quick. Dice is loud. Blackjack is classy. Pick your poison.", durationMs: 6200 },
             { emotion: "surprised", animation: "react", line: "Tap me if you want a new thought. I have plenty.", durationMs: 5800 },
             { emotion: "happy", animation: "talk", line: "I can motivate. I can judge. I can also do both at once.", durationMs: 6600 },
         ],

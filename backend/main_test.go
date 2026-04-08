@@ -30,6 +30,46 @@ func TestNormalizeSide(t *testing.T) {
 	}
 }
 
+func TestNormalizeDiceBetType(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{name: "low alias", input: "Low 2-6", want: diceBetTypeLow},
+		{name: "high exact", input: "high", want: diceBetTypeHigh},
+		{name: "lucky seven", input: "Lucky 7", want: diceBetTypeLucky7},
+		{name: "invalid", input: "middle", want: ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := normalizeDiceBetType(tt.input); got != tt.want {
+				t.Fatalf("normalizeDiceBetType(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestResolveDiceRoll(t *testing.T) {
+	t.Parallel()
+
+	if got := resolveDiceRoll(diceBetTypeLow, 1, 3); !got.Won || got.Outcome != "win" {
+		t.Fatalf("low bet expected win, got %+v", got)
+	}
+
+	if got := resolveDiceRoll(diceBetTypeHigh, 2, 4); got.Won || got.Outcome != "loss" {
+		t.Fatalf("high bet expected loss, got %+v", got)
+	}
+
+	if got := resolveDiceRoll(diceBetTypeLucky7, 4, 3); !got.Won || got.Status != "exact_seven" || got.ProfitMultiplier != 4 {
+		t.Fatalf("lucky7 exact match returned %+v", got)
+	}
+}
+
 func TestLevelAndRewardHelpers(t *testing.T) {
 	t.Parallel()
 
@@ -64,6 +104,9 @@ func TestLevelAndRewardHelpers(t *testing.T) {
 			check: func(t *testing.T) {
 				if got := calculateXPReward("blackjack", 50, "win", "blackjack"); got != 85 {
 					t.Fatalf("calculateXPReward(blackjack) = %d, want 85", got)
+				}
+				if got := calculateXPReward("dice", 40, "win", "exact_seven"); got != 72 {
+					t.Fatalf("calculateXPReward(dice) = %d, want 72", got)
 				}
 			},
 		},

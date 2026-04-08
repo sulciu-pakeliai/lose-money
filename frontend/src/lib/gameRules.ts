@@ -1,4 +1,4 @@
-export type GameRuleKey = "coinflip" | "blackjack";
+export type GameRuleKey = "coinflip" | "blackjack" | "dice";
 
 export type GameRuleDefinition = {
     eyebrow: string;
@@ -63,5 +63,29 @@ export const GAME_RULES: Record<GameRuleKey, GameRuleDefinition> = {
             },
         ],
         footer: "Current version supports single-hand blackjack with hit and stand. No split or double down yet.",
+    },
+    dice: {
+        eyebrow: "Quick Guide",
+        title: "How Lucky 7 Works",
+        summary: "Two dice hit the felt. Bet low, high, or call an exact Lucky 7 for a bigger payout.",
+        steps: [
+            {
+                title: "Choose a lane",
+                body: "Low wins on totals 2 through 6. High wins on 8 through 12. Lucky 7 only wins on an exact total of 7.",
+            },
+            {
+                title: "Set your wager",
+                body: "Low and high pay 1:1. Lucky 7 pays 4:1 because it only lands on one total.",
+            },
+            {
+                title: "Server rolls both dice",
+                body: "The backend resolves both values, so the result cannot be influenced by client-side timing or refreshes.",
+            },
+            {
+                title: "Exact sevens hit harder",
+                body: "Calling Lucky 7 correctly returns a larger profit and also counts toward the special dice achievement.",
+            },
+        ],
+        footer: "Low and high lose when the total lands on 7. Lucky 7 is the only way to cash that middle roll.",
     },
 };

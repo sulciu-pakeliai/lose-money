@@ -2,6 +2,7 @@ import type { Achievement, Mission } from "../lib/session";
 
 type LobbyProps = {
     onSelectCoinFlip: () => void;
+    onSelectDice: () => void;
     onSelectBlackjack: () => void;
     onOpenMissions: () => void;
     onOpenAchievements: () => void;
@@ -18,6 +19,13 @@ const gameTiles = [
         onSelect: "coinflip",
     },
     {
+        title: "Lucky 7",
+        subtitle: "Dice Game",
+        accent: "from-rose-300 via-orange-400 to-amber-400",
+        icon: "⚄",
+        onSelect: "dice",
+    },
+    {
         title: "High Table 21",
         subtitle: "Blackjack",
         accent: "from-emerald-300 via-cyan-400 to-blue-500",
@@ -28,6 +36,7 @@ const gameTiles = [
 
 export function Lobby({
     onSelectCoinFlip,
+    onSelectDice,
     onSelectBlackjack,
     onOpenMissions,
     onOpenAchievements,
@@ -55,7 +64,7 @@ export function Lobby({
                 {gameTiles.map(tile => (
                     <button
                         key={tile.title}
-                        onClick={tile.onSelect === "coinflip" ? onSelectCoinFlip : onSelectBlackjack}
+                        onClick={tile.onSelect === "coinflip" ? onSelectCoinFlip : tile.onSelect === "dice" ? onSelectDice : onSelectBlackjack}
                         className="group relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-slate-950/70 via-slate-900/70 to-slate-950/80 p-6 text-left transition hover:-translate-y-1 hover:border-white/20 hover:shadow-[0_25px_60px_rgba(14,116,144,0.35)]"
                         type="button"
                     >

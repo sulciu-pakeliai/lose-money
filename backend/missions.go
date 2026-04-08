@@ -14,6 +14,7 @@ const (
 	missionScopeAll       = "all"
 	missionScopeCoinFlip  = "coinflip"
 	missionScopeBlackjack = "blackjack"
+	missionScopeDice      = "dice"
 
 	missionMetricRounds = "rounds_played"
 	missionMetricWins   = "wins"
@@ -195,6 +196,42 @@ var blackjackMissionTemplates = []missionTemplate{
 		Target:        250,
 		RewardBalance: 240,
 		RewardXP:      50,
+	},
+}
+
+var diceMissionTemplates = []missionTemplate{
+	{
+		TemplateKey:   "dice_rounds_4",
+		GroupName:     "Lucky 7",
+		Title:         "Bones on Felt",
+		Description:   "Play 4 rounds of Lucky 7.",
+		GameScope:     missionScopeDice,
+		Metric:        missionMetricRounds,
+		Target:        4,
+		RewardBalance: 180,
+		RewardXP:      40,
+	},
+	{
+		TemplateKey:   "dice_wins_2",
+		GroupName:     "Lucky 7",
+		Title:         "Sharp Bones",
+		Description:   "Win 2 Lucky 7 rounds.",
+		GameScope:     missionScopeDice,
+		Metric:        missionMetricWins,
+		Target:        2,
+		RewardBalance: 210,
+		RewardXP:      50,
+	},
+	{
+		TemplateKey:   "dice_wager_180",
+		GroupName:     "Lucky 7",
+		Title:         "Dice Rain",
+		Description:   "Wager 180 credits on Lucky 7.",
+		GameScope:     missionScopeDice,
+		Metric:        missionMetricWager,
+		Target:        180,
+		RewardBalance: 190,
+		RewardXP:      42,
 	},
 }
 
@@ -423,7 +460,7 @@ func (a *application) loadDailyMissionsTx(ctx context.Context, tx pgx.Tx, sessio
 	}
 	defer rows.Close()
 
-	missions := make([]missionDTO, 0, 3)
+	missions := make([]missionDTO, 0, 4)
 	for rows.Next() {
 		record, err := scanMission(rows)
 		if err != nil {
@@ -471,7 +508,7 @@ func (a *application) loadDailyMissionRecordsForUpdateTx(ctx context.Context, tx
 	}
 	defer rows.Close()
 
-	records := make([]missionRecord, 0, 3)
+	records := make([]missionRecord, 0, 4)
 	for rows.Next() {
 		record, err := scanMission(rows)
 		if err != nil {
@@ -539,6 +576,7 @@ func assignDailyMissionTemplates(sessionID string, cycleStart time.Time) []missi
 		pickMissionTemplate(universalMissionTemplates, sessionID, cycleStart, "universal"),
 		pickMissionTemplate(coinFlipMissionTemplates, sessionID, cycleStart, "coinflip"),
 		pickMissionTemplate(blackjackMissionTemplates, sessionID, cycleStart, "blackjack"),
+		pickMissionTemplate(diceMissionTemplates, sessionID, cycleStart, "dice"),
 	}
 }
 

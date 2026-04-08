@@ -13,6 +13,8 @@ function achievementScopeLabel(scope: Achievement["gameScope"]) {
     switch (scope) {
         case "coinflip":
             return "Flipzilla";
+        case "dice":
+            return "Lucky 7";
         case "blackjack":
             return "High Table 21";
         default:
@@ -64,7 +66,7 @@ export function AchievementsBoard({ achievements }: AchievementsBoardProps) {
     );
 
     return (
-        <section className="page-swap page-from-right w-full max-w-5xl rounded-[2rem] border border-white/10 bg-white/5 p-6">
+        <section className="page-swap page-from-right w-full max-w-5xl rounded-4xl border border-white/10 bg-white/5 p-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
                     <h2 className="mt-2 font-display text-4xl text-white">Badge cabinet</h2>

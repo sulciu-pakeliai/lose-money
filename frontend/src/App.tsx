@@ -9,6 +9,7 @@ import {
     fetchState,
     hitBlackjack,
     markNotificationsRead,
+    submitDiceRoll,
     standBlackjack,
     startBlackjack,
     submitCoinFlip,
@@ -17,6 +18,8 @@ import {
     type BlackjackActionResult,
     type CoinSide,
     type CoinFlipResult,
+    type DiceBetType,
+    type DiceRollResult,
     type MissionClaimResult,
     type TopUpResult,
 } from "./lib/session";
@@ -27,6 +30,7 @@ import { Lobby } from "./components/Lobby";
 import { MissionsBoard } from "./components/MissionsBoard";
 import { AchievementsBoard } from "./components/AchievementsBoard";
 import { CoinFlipGame } from "./components/CoinFlipGame";
+import { DiceGame } from "./components/DiceGame";
 import { BlackjackGame } from "./components/BlackjackGame";
 import { BetHistory } from "./components/BetHistory";
 import { GameRulesModal } from "./components/GameRulesModal";
@@ -37,7 +41,7 @@ import { NotificationsCenter } from "./components/NotificationsCenter";
 import { AchievementUnlockToasts } from "./components/AchievementUnlockToasts";
 import { VisualAvatar } from "./components/VisualAvatar";
 
-type View = "lobby" | "missions" | "achievements" | "coinflip" | "blackjack" | "history" | "topup" | "profile" | "notifications";
+type View = "lobby" | "missions" | "achievements" | "coinflip" | "dice" | "blackjack" | "history" | "topup" | "profile" | "notifications";
 
 export function App() {
     const [view, setView] = useState<View>("lobby");
@@ -73,7 +77,7 @@ export function App() {
     }, []);
 
     useEffect(() => {
-        if (view !== "coinflip" && view !== "blackjack") {
+        if (view !== "coinflip" && view !== "blackjack" && view !== "dice") {
             return;
         }
 
@@ -186,6 +190,22 @@ export function App() {
         );
     };
 
+    const applyDice = (next: DiceRollResult) => {
+        setState(current =>
+            current
+                ? {
+                    ...current,
+                    session: next.session,
+                    history: [next.bet, ...current.history].slice(0, 100),
+                    topUp: next.topUp,
+                    missions: next.missions,
+                    achievements: next.achievements,
+                    notifications: next.notifications,
+                }
+                : current,
+        );
+    };
+
     const applyBlackjack = (next: BlackjackActionResult) => {
         setState(current =>
             current
@@ -228,6 +248,12 @@ export function App() {
         const next = await claimTopUp(amount);
         applyTopUp(next);
         setView("lobby");
+    };
+
+    const handleDiceRoll = async (betType: DiceBetType, amount: number) => {
+        const next = await submitDiceRoll(betType, amount);
+        applyDice(next);
+        return next;
     };
 
     const handleBlackjackStart = async (amount: number) => {
@@ -354,6 +380,7 @@ export function App() {
                     {!isLoading && state && view === "lobby" && (
                         <Lobby
                             onSelectCoinFlip={() => setView("coinflip")}
+                            onSelectDice={() => setView("dice")}
                             onSelectBlackjack={() => setView("blackjack")}
                             onOpenMissions={() => setView("missions")}
                             onOpenAchievements={() => setView("achievements")}
@@ -367,6 +394,9 @@ export function App() {
                     {!isLoading && state && view === "achievements" && <AchievementsBoard achievements={state.achievements} />}
                     {!isLoading && state && view === "coinflip" && (
                         <CoinFlipGame balance={state.session.balance} onFlip={handleCoinFlip} onOpenRules={() => openRules("coinflip")} />
+                    )}
+                    {!isLoading && state && view === "dice" && (
+                        <DiceGame balance={state.session.balance} onRoll={handleDiceRoll} onOpenRules={() => openRules("dice")} />
                     )}
                     {!isLoading && state && view === "blackjack" && (
                         <BlackjackGame
