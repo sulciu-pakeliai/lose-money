@@ -61,10 +61,10 @@ export function Header({
     return (
         <header className="flex flex-col gap-6">
             <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_16rem]">
-                <div className="flex min-w-0 flex-col gap-4 rounded-[2rem] border border-white/10 bg-white/5 p-5">
+                <div className="flex min-w-0 flex-col gap-4 rounded-4xl border border-white/10 bg-white/5 p-5">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-cyan-400 via-blue-500 to-indigo-600 p-[2px]">
+                            <div className="h-12 w-12 rounded-2xl bg-linear-to-br from-cyan-400 via-blue-500 to-indigo-600 p-0.5">
                                 <div className="grid h-full w-full place-items-center rounded-[14px] bg-slate-950/80 font-display text-lg tracking-wide">
                                     LM
                                 </div>
@@ -181,7 +181,7 @@ export function Header({
                     </nav>
                 </div>
 
-                <section className="level-panel overflow-hidden rounded-[2rem] border border-amber-300/20 p-4">
+                <section className="level-panel overflow-hidden rounded-4xl border border-amber-300/20 p-4">
                     <div className="flex items-start justify-between gap-4">
                         <div>
                             <p className="text-[10px] uppercase tracking-[0.28em] text-amber-100/70">Level</p>
