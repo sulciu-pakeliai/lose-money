@@ -4,20 +4,41 @@ import { SessionTimer } from "./SessionTimer";
 
 type ProfileProps = {
   session: Session;
+  onDeleteAccount: () => Promise<void>;
 };
 
 const formatNumber = (value: number) =>
   new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value);
 
-export function Profile({ session }: ProfileProps) {
+export function Profile({ session, onDeleteAccount }: ProfileProps) {
   const [stats, setStats] = useState<ProfileStats | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchProfile()
       .then(setStats)
       .catch(e => setError(e instanceof Error ? e.message : "Failed to load profile"));
   }, []);
+
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(
+      "Delete this account permanently? This removes your saved data and you will not be able to log in with this account again.",
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setDeleteError(null);
+    setIsDeleting(true);
+    try {
+      await onDeleteAccount();
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : "Failed to delete account");
+      setIsDeleting(false);
+    }
+  };
 
   const winRate =
     stats && stats.totalBets > 0
@@ -82,6 +103,35 @@ export function Profile({ session }: ProfileProps) {
           </div>
         </div>
       )}
+
+      <div className="rounded-3xl border border-rose-400/30 bg-rose-500/10 p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="space-y-2">
+            <p className="text-xs uppercase tracking-[0.3em] text-rose-200/85">Account Settings</p>
+            <p className="text-sm text-rose-100/80">
+              Permanently delete {session.userEmail ?? "this account"} and remove its saved profile, session data, and login access.
+            </p>
+            <p className="text-xs uppercase tracking-[0.22em] text-rose-200/70">
+              This action cannot be undone.
+            </p>
+          </div>
+
+          <button
+            onClick={() => {
+              void handleDeleteAccount();
+            }}
+            className="rounded-full border border-rose-300/60 bg-rose-500/20 px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-rose-100 transition hover:bg-rose-500/30 disabled:cursor-not-allowed disabled:opacity-60"
+            type="button"
+            disabled={isDeleting}
+          >
+            {isDeleting ? "Deleting..." : "Delete Account"}
+          </button>
+        </div>
+
+        {deleteError && (
+          <p className="mt-4 text-xs uppercase tracking-[0.24em] text-rose-200">{deleteError}</p>
+        )}
+      </div>
     </section>
   );
 }

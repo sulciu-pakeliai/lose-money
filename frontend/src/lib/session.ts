@@ -250,6 +250,12 @@ export async function authLogout(): Promise<{ session?: Session; status?: string
     });
 }
 
+export async function deleteAccount(): Promise<{ session?: Session; status: string }> {
+    return apiFetch<{ session?: Session; status: string }>("/api/account", {
+        method: "DELETE",
+    });
+}
+
 export async function claimMission(missionId: string): Promise<MissionClaimResult> {
     return apiFetch<MissionClaimResult>("/api/missions/claim", {
         method: "POST",

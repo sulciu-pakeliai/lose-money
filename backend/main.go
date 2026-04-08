@@ -151,6 +151,7 @@ func main() {
 	mux.HandleFunc("POST /api/auth/register", app.handleRegister)
 	mux.HandleFunc("POST /api/auth/login", app.handleLogin)
 	mux.HandleFunc("POST /api/auth/logout", app.handleLogout)
+	mux.HandleFunc("DELETE /api/account", app.handleDeleteAccount)
 	mux.HandleFunc("GET /api/state", app.handleState)
 	mux.HandleFunc("GET /api/notifications", app.handleNotifications)
 	mux.HandleFunc("POST /api/notifications/read", app.handleNotificationsRead)
@@ -695,35 +696,12 @@ func (a *application) ensureSession(w http.ResponseWriter, r *http.Request) (ses
 		}
 	}
 
-	session := sessionRecord{
-		ID:          mustRandomToken(24),
-		Balance:     startBalance,
-		XP:          0,
-		GamesPlayed: 0,
-		CreatedAt:   time.Now().UTC(),
-	}
-
-	if _, err := a.db.Exec(
-		r.Context(),
-		`INSERT INTO sessions (id, balance, xp, games_played, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $5)`,
-		session.ID,
-		session.Balance,
-		session.XP,
-		session.GamesPlayed,
-		session.CreatedAt,
-	); err != nil {
+	session, err := a.createGuestSession(r.Context())
+	if err != nil {
 		return sessionRecord{}, err
 	}
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     sessionCookieName,
-		Value:    session.ID,
-		Path:     "/",
-		MaxAge:   60 * 60 * 24 * 30,
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-		Secure:   isSecureRequest(r),
-	})
+	setSessionCookie(w, r, session.ID)
 
 	return session, nil
 }

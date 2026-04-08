@@ -102,6 +102,54 @@ type loginRequest struct {
 	Password string `json:"password"`
 }
 
+func (a *application) createGuestSession(ctx context.Context) (sessionRecord, error) {
+	session := sessionRecord{
+		ID:          mustRandomToken(24),
+		Balance:     startBalance,
+		XP:          0,
+		GamesPlayed: 0,
+		CreatedAt:   time.Now().UTC(),
+	}
+
+	if _, err := a.db.Exec(
+		ctx,
+		`INSERT INTO sessions (id, balance, xp, games_played, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $5)`,
+		session.ID,
+		session.Balance,
+		session.XP,
+		session.GamesPlayed,
+		session.CreatedAt,
+	); err != nil {
+		return sessionRecord{}, err
+	}
+
+	return a.loadSession(ctx, session.ID)
+}
+
+func setSessionCookie(w http.ResponseWriter, r *http.Request, sessionID string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     sessionCookieName,
+		Value:    sessionID,
+		Path:     "/",
+		MaxAge:   60 * 60 * 24 * 30,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   isSecureRequest(r),
+	})
+}
+
+func clearSessionCookie(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     sessionCookieName,
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   isSecureRequest(r),
+	})
+}
+
 func (a *application) refreshSessionStart(ctx context.Context, sessionID string, now time.Time) error {
 	_, err := a.db.Exec(ctx, "UPDATE sessions SET created_at = $1, updated_at = $1 WHERE id = $2", now, sessionID)
 	return err
@@ -206,15 +254,7 @@ func (a *application) handleLogin(w http.ResponseWriter, r *http.Request) {
 		}
 		sess, err := a.loadSession(ctx, existingSessionID)
 		if err == nil {
-			http.SetCookie(w, &http.Cookie{
-				Name:     sessionCookieName,
-				Value:    sess.ID,
-				Path:     "/",
-				MaxAge:   60 * 60 * 24 * 30,
-				HttpOnly: true,
-				SameSite: http.SameSiteLaxMode,
-				Secure:   isSecureRequest(r),
-			})
+			setSessionCookie(w, r, sess.ID)
 			writeJSON(w, http.StatusOK, map[string]any{"id": userID, "session": toSessionDTO(sess)})
 			return
 		}
@@ -245,42 +285,73 @@ func (a *application) handleLogin(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to load session")
 		return
 	}
-	http.SetCookie(w, &http.Cookie{
-		Name:     sessionCookieName,
-		Value:    sess.ID,
-		Path:     "/",
-		MaxAge:   60 * 60 * 24 * 30,
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-		Secure:   isSecureRequest(r),
-	})
+	setSessionCookie(w, r, sess.ID)
 	writeJSON(w, http.StatusOK, map[string]any{"id": userID, "session": toSessionDTO(sess)})
 }
 
 func (a *application) handleLogout(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	newID := mustRandomToken(24)
-	now := time.Now().UTC()
-	if _, err := a.db.Exec(ctx, `INSERT INTO sessions (id, balance, xp, games_played, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$5)`, newID, startBalance, 0, 0, now); err != nil {
+	sess, err := a.createGuestSession(ctx)
+	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to create session")
 		return
 	}
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     sessionCookieName,
-		Value:    newID,
-		Path:     "/",
-		MaxAge:   60 * 60 * 24 * 30,
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-		Secure:   isSecureRequest(r),
-	})
+	setSessionCookie(w, r, sess.ID)
+	writeJSON(w, http.StatusOK, map[string]any{"session": toSessionDTO(sess)})
+}
 
-	if sess, err := a.loadSession(ctx, newID); err == nil {
-		writeJSON(w, http.StatusOK, map[string]any{"session": toSessionDTO(sess)})
+func (a *application) handleDeleteAccount(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie(sessionCookieName)
+	if err != nil || cookie.Value == "" {
+		writeError(w, http.StatusUnauthorized, "sign in required")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]any{"status": "ok"})
+	session, err := a.loadSession(r.Context(), cookie.Value)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			writeError(w, http.StatusUnauthorized, "sign in required")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "failed to load session")
+		return
+	}
+	if session.UserID == nil {
+		writeError(w, http.StatusUnauthorized, "sign in required")
+		return
+	}
+
+	tx, err := a.db.Begin(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to start deletion")
+		return
+	}
+	defer tx.Rollback(r.Context())
+
+	if _, err := tx.Exec(r.Context(), `DELETE FROM sessions WHERE user_id = $1`, *session.UserID); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to delete account data")
+		return
+	}
+
+	if _, err := tx.Exec(r.Context(), `DELETE FROM users WHERE id = $1`, *session.UserID); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to delete account")
+		return
+	}
+
+	if err := tx.Commit(r.Context()); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to delete account")
+		return
+	}
+
+	guestSession, err := a.createGuestSession(r.Context())
+	if err != nil {
+		clearSessionCookie(w, r)
+		writeJSON(w, http.StatusOK, map[string]any{"status": "deleted"})
+		return
+	}
+
+	setSessionCookie(w, r, guestSession.ID)
+	writeJSON(w, http.StatusOK, map[string]any{"status": "deleted", "session": toSessionDTO(guestSession)})
 }

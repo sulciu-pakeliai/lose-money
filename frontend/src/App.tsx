@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import "./index.css";
 
 import {
+    deleteAccount,
     authLogout,
     claimTopUp,
     claimMission,
@@ -293,6 +294,12 @@ export function App() {
         await loadState();
     };
 
+    const handleDeleteAccount = async () => {
+        await deleteAccount();
+        setView("lobby");
+        await loadState();
+    };
+
     return (
         <div className="min-h-screen">
             <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-6 pb-14 pt-10">
@@ -376,7 +383,9 @@ export function App() {
                     {!isLoading && state && view === "topup" && (
                         <TopUp policy={state.topUp} onConfirm={handleTopUp} onCancel={() => setView("lobby")} />
                     )}
-                    {!isLoading && state && view === "profile" && <Profile session={state.session} />}
+                    {!isLoading && state && view === "profile" && (
+                        <Profile session={state.session} onDeleteAccount={handleDeleteAccount} />
+                    )}
                 </main>
             </div>
 
