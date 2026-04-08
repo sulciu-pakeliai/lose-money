@@ -65,7 +65,7 @@ export function Lobby({
                     <button
                         key={tile.title}
                         onClick={tile.onSelect === "coinflip" ? onSelectCoinFlip : tile.onSelect === "dice" ? onSelectDice : onSelectBlackjack}
-                        className="group relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-slate-950/70 via-slate-900/70 to-slate-950/80 p-6 text-left transition hover:-translate-y-1 hover:border-white/20 hover:shadow-[0_25px_60px_rgba(14,116,144,0.35)]"
+                        className="group relative overflow-hidden rounded-3xl border border-white/10 bg-linear-to-br from-slate-950/70 via-slate-900/70 to-slate-950/80 p-6 text-left transition hover:-translate-y-1 hover:border-white/20 hover:shadow-[0_25px_60px_rgba(14,116,144,0.35)]"
                         type="button"
                     >
                         <div className="absolute inset-0 opacity-0 transition group-hover:opacity-100">
@@ -74,7 +74,7 @@ export function Lobby({
                         <div className="relative">
                             <div className="flex items-center gap-4">
                                 <div
-                                    className={`grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br ${tile.accent} text-2xl shadow-[0_12px_30px_rgba(248,113,113,0.35)]`}
+                                    className={`grid h-16 w-16 place-items-center rounded-2xl bg-linear-to-br ${tile.accent} text-2xl shadow-[0_12px_30px_rgba(248,113,113,0.35)]`}
                                 >
                                     {tile.icon}
                                 </div>
