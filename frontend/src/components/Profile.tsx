@@ -60,7 +60,6 @@ export function Profile({ session, onDeleteAccount }: ProfileProps) {
 
         <div className="mt-4 rounded-2xl border border-cyan-300/15 bg-cyan-400/8 px-4 py-3">
           <SessionTimer
-            createdAt={session.createdAt}
             labelClassName="text-[10px] uppercase tracking-[0.25em] text-cyan-100/65"
             valueClassName="mt-1 font-display text-2xl text-cyan-50"
           />
@@ -74,7 +73,7 @@ export function Profile({ session, onDeleteAccount }: ProfileProps) {
           </div>
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 transition-all"
+              className="h-full rounded-full bg-linear-to-r from-cyan-400 to-blue-500 transition-all"
               style={{ width: `${Math.min(100, (session.xpIntoLevel / session.xpForNextLevel) * 100)}%` }}
             />
           </div>

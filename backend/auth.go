@@ -150,11 +150,6 @@ func clearSessionCookie(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (a *application) refreshSessionStart(ctx context.Context, sessionID string, now time.Time) error {
-	_, err := a.db.Exec(ctx, "UPDATE sessions SET created_at = $1, updated_at = $1 WHERE id = $2", now, sessionID)
-	return err
-}
-
 func (a *application) handleRegister(w http.ResponseWriter, r *http.Request) {
 	var req registerRequest
 	if err := decodeJSON(r, &req); err != nil {
@@ -248,10 +243,6 @@ func (a *application) handleLogin(w http.ResponseWriter, r *http.Request) {
 	// 1) If user already has a session, use it
 	var existingSessionID string
 	if err := a.db.QueryRow(ctx, "SELECT id FROM sessions WHERE user_id = $1 ORDER BY updated_at DESC LIMIT 1", userID).Scan(&existingSessionID); err == nil {
-		if err := a.refreshSessionStart(ctx, existingSessionID, time.Now().UTC()); err != nil {
-			writeError(w, http.StatusInternalServerError, "failed to refresh session")
-			return
-		}
 		sess, err := a.loadSession(ctx, existingSessionID)
 		if err == nil {
 			setSessionCookie(w, r, sess.ID)

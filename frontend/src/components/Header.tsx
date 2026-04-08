@@ -92,7 +92,6 @@ export function Header({
                         <div className="flex justify-start">
                             <div className="rounded-2xl border border-cyan-300/15 bg-cyan-400/8 px-4 py-3 text-left">
                                 <SessionTimer
-                                    createdAt={session.createdAt}
                                     labelClassName="text-[10px] uppercase tracking-[0.24em] text-cyan-100/65"
                                     valueClassName="mt-1 font-display text-lg text-cyan-50"
                                 />
