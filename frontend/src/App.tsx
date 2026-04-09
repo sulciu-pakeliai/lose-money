@@ -13,6 +13,7 @@ import {
     standBlackjack,
     startBlackjack,
     submitCoinFlip,
+    submitSlotSpin,
     type Achievement,
     type AppState,
     type BlackjackActionResult,
@@ -22,6 +23,7 @@ import {
     type DiceRollResult,
     type MissionClaimResult,
     type TopUpResult,
+    type SlotSpinResult,
 } from "./lib/session";
 import { AuthModal } from "./components/AuthModal";
 import type { GameRuleKey } from "./lib/gameRules";
@@ -40,8 +42,10 @@ import { Profile } from "./components/Profile";
 import { NotificationsCenter } from "./components/NotificationsCenter";
 import { AchievementUnlockToasts } from "./components/AchievementUnlockToasts";
 import { VisualAvatar } from "./components/VisualAvatar";
+import { SlotGame } from "./components/SlotGame";
 
-type View = "lobby" | "missions" | "achievements" | "coinflip" | "dice" | "blackjack" | "history" | "topup" | "profile" | "notifications";
+
+type View = "lobby" | "missions" | "achievements" | "coinflip" | "dice" | "blackjack" | "slots" | "history" | "topup" | "profile" | "notifications";
 
 export function App() {
     const [view, setView] = useState<View>("lobby");
@@ -223,6 +227,20 @@ export function App() {
         );
     };
 
+    const applySlotSpin = (next: SlotSpinResult) => {
+        setState(current =>
+            current ? {
+                ...current,
+                session: next.session,
+                history: [next.bet, ...current.history].slice(0, 100),
+                topUp: next.topUp,
+                missions: next.missions,
+                achievements: next.achievements,
+                notifications: next.notifications,
+            } : current,
+        );
+    };
+
     const applyMissionClaim = (next: MissionClaimResult) => {
         setState(current =>
             current
@@ -271,6 +289,12 @@ export function App() {
     const handleBlackjackStand = async () => {
         const next = await standBlackjack();
         applyBlackjack(next);
+        return next;
+    };
+
+    const handleSlotSpin = async (amount: number) => {
+        const next = await submitSlotSpin(amount);
+        applySlotSpin(next);
         return next;
     };
 
@@ -382,6 +406,7 @@ export function App() {
                             onSelectCoinFlip={() => setView("coinflip")}
                             onSelectDice={() => setView("dice")}
                             onSelectBlackjack={() => setView("blackjack")}
+                            onSelectSlots={() => setView("slots")}
                             onOpenMissions={() => setView("missions")}
                             onOpenAchievements={() => setView("achievements")}
                             missions={state.missions}
@@ -415,6 +440,9 @@ export function App() {
                     )}
                     {!isLoading && state && view === "profile" && (
                         <Profile session={state.session} onDeleteAccount={handleDeleteAccount} />
+                    )}
+                    {!isLoading && state && view === "slots" && (
+                        <SlotGame balance={state.session.balance} onSpin={handleSlotSpin} />
                     )}
                 </main>
             </div>

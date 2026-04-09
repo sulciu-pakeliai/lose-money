@@ -163,6 +163,7 @@ func main() {
 	mux.HandleFunc("POST /api/blackjack/hit", app.handleBlackjackHit)
 	mux.HandleFunc("POST /api/blackjack/stand", app.handleBlackjackStand)
 	mux.HandleFunc("GET /api/profile", app.handleProfile)
+	mux.HandleFunc("POST /api/slots/spin", app.handleSlotSpin)
 
 	server := &http.Server{
 		Addr:              ":" + port,

@@ -176,6 +176,19 @@ export type ProfileStats = {
   biggestWin: number;
 };
 
+export type SlotSpinResult = {
+    session: Session;
+    bet: BetRecord;
+    reels: [string, string, string];
+    outcome: "win" | "loss";
+    multiplier: number;
+    payout: number;
+    topUp: TopUpPolicy;
+    missions: Mission[];
+    achievements: Achievement[];
+    notifications: AppNotification[];
+};
+
 type APIError = {
     error?: string;
 };
@@ -307,5 +320,13 @@ export async function fetchNotifications(): Promise<{ notifications: AppNotifica
 export async function markNotificationsRead(): Promise<{ notifications: AppNotification[] }> {
     return apiFetch<{ notifications: AppNotification[] }>("/api/notifications/read", {
         method: "POST",
+    });
+}
+
+export async function submitSlotSpin(amount: number): Promise<SlotSpinResult> {
+    return apiFetch<SlotSpinResult>("/api/slots/spin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount }),
     });
 }
