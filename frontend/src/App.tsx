@@ -17,6 +17,7 @@ import {
     type Achievement,
     type AppState,
     type BlackjackActionResult,
+    type BetRecord,
     type CoinSide,
     type CoinFlipResult,
     type DiceBetType,
@@ -57,6 +58,7 @@ export function App() {
     const [authModalView, setAuthModalView] = useState<"choose" | "signin" | "signup">("choose");
     const [showSignInModal, setShowSignInModal] = useState(false);
     const [achievementToasts, setAchievementToasts] = useState<Achievement[]>([]);
+    const [avatarOutcome, setAvatarOutcome] = useState<BetRecord | null>(null);
     const hasHydratedAchievements = useRef(false);
     const unlockedAchievementKeys = useRef<Set<string>>(new Set());
     const previousSessionId = useRef<string | null>(null);
@@ -117,6 +119,18 @@ export function App() {
                 // Keep the current local state if the read sync fails.
             });
     }, [unreadNotificationCount, view]);
+
+    useEffect(() => {
+        if (!avatarOutcome || typeof window === "undefined") {
+            return;
+        }
+
+        const timeout = window.setTimeout(() => {
+            setAvatarOutcome(current => (current?.id === avatarOutcome.id ? null : current));
+        }, 24000);
+
+        return () => window.clearTimeout(timeout);
+    }, [avatarOutcome]);
 
     useEffect(() => {
         if (!state) {
@@ -211,6 +225,11 @@ export function App() {
     };
 
     const applyBlackjack = (next: BlackjackActionResult) => {
+        if (next.historyEntry) {
+            setAvatarOutcome(next.historyEntry);
+        } else {
+            setAvatarOutcome(null);
+        }
         setState(current =>
             current
                 ? {
@@ -418,10 +437,20 @@ export function App() {
                     )}
                     {!isLoading && state && view === "achievements" && <AchievementsBoard achievements={state.achievements} />}
                     {!isLoading && state && view === "coinflip" && (
-                        <CoinFlipGame balance={state.session.balance} onFlip={handleCoinFlip} onOpenRules={() => openRules("coinflip")} />
+                        <CoinFlipGame
+                            balance={state.session.balance}
+                            onFlip={handleCoinFlip}
+                            onOpenRules={() => openRules("coinflip")}
+                            onOutcomeReveal={setAvatarOutcome}
+                        />
                     )}
                     {!isLoading && state && view === "dice" && (
-                        <DiceGame balance={state.session.balance} onRoll={handleDiceRoll} onOpenRules={() => openRules("dice")} />
+                        <DiceGame
+                            balance={state.session.balance}
+                            onRoll={handleDiceRoll}
+                            onOpenRules={() => openRules("dice")}
+                            onOutcomeReveal={setAvatarOutcome}
+                        />
                     )}
                     {!isLoading && state && view === "blackjack" && (
                         <BlackjackGame
@@ -442,7 +471,7 @@ export function App() {
                         <Profile session={state.session} onDeleteAccount={handleDeleteAccount} />
                     )}
                     {!isLoading && state && view === "slots" && (
-                        <SlotGame balance={state.session.balance} onSpin={handleSlotSpin} />
+                        <SlotGame balance={state.session.balance} onSpin={handleSlotSpin} onOutcomeReveal={setAvatarOutcome} />
                     )}
                 </main>
             </div>
@@ -481,6 +510,7 @@ export function App() {
                     loadingError={loadingError}
                     state={state}
                     view={view}
+                    lastOutcome={avatarOutcome}
                 />
             )}
         </div>

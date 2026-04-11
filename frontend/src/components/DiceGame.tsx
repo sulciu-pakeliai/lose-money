@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import type { DiceBetType, DiceRollResult, DiceRollSummary } from "../lib/session";
+import type { BetRecord, DiceBetType, DiceRollResult, DiceRollSummary } from "../lib/session";
 
 type DiceGameProps = {
     balance: number;
     onRoll: (betType: DiceBetType, amount: number) => Promise<DiceRollResult>;
     onOpenRules: () => void;
+    onOutcomeReveal: (bet: BetRecord) => void;
 };
 
 const betOptions = [10, 25, 50, 100, 250, 500];
@@ -61,7 +62,7 @@ function DiceFace({ value, rolling = false }: { value: number; rolling?: boolean
     );
 }
 
-export function DiceGame({ balance, onRoll, onOpenRules }: DiceGameProps) {
+export function DiceGame({ balance, onRoll, onOpenRules, onOutcomeReveal }: DiceGameProps) {
     const [betType, setBetType] = useState<DiceBetType>("lucky7");
     const [bet, setBet] = useState<number>(25);
     const [customBet, setCustomBet] = useState<string>("25");
@@ -117,6 +118,7 @@ export function DiceGame({ balance, onRoll, onOpenRules }: DiceGameProps) {
 
             setDisplayedDice([response.roll.dieOne, response.roll.dieTwo]);
             setRoll(response.roll);
+            onOutcomeReveal(response.bet);
         } catch (requestError) {
             setError(requestError instanceof Error ? requestError.message : "Unable to resolve dice roll");
         } finally {

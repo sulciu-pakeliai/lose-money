@@ -570,6 +570,14 @@ input[type="number"] {
   animation: avatar-react 380ms cubic-bezier(0.2, 0.9, 0.2, 1);
 }
 
+.avatar-motion-celebrate {
+  animation: avatar-celebrate 620ms cubic-bezier(0.16, 0.9, 0.2, 1) infinite;
+}
+
+.avatar-motion-panic {
+  animation: avatar-panic 420ms cubic-bezier(0.2, 0.9, 0.2, 1) infinite;
+}
+
 .avatar-character-dragging {
   cursor: grabbing;
 }
@@ -932,6 +940,47 @@ input[type="number"] {
   }
   100% {
     transform: scale(1) rotate(0deg);
+    filter: saturate(1);
+  }
+}
+
+@keyframes avatar-celebrate {
+  0% {
+    transform: translateY(0) rotate(0deg) scale(1);
+    filter: saturate(1);
+  }
+  35% {
+    transform: translateY(-10px) rotate(-3deg) scale(1.04);
+    filter: saturate(1.24);
+  }
+  70% {
+    transform: translateY(-3px) rotate(2deg) scale(1.01);
+    filter: saturate(1.16);
+  }
+  100% {
+    transform: translateY(0) rotate(0deg) scale(1);
+    filter: saturate(1);
+  }
+}
+
+@keyframes avatar-panic {
+  0% {
+    transform: translateX(0) rotate(0deg) scale(1);
+    filter: saturate(0.95);
+  }
+  25% {
+    transform: translateX(-5px) rotate(-2deg) scale(0.99);
+    filter: saturate(0.86);
+  }
+  55% {
+    transform: translateX(5px) rotate(2deg) scale(1.01);
+    filter: saturate(1.04);
+  }
+  80% {
+    transform: translateX(-2px) rotate(-1deg) scale(1);
+  }
+  100% {
+    transform: translateX(0) rotate(0deg) scale(1);
     filter: saturate(1);
   }
 }

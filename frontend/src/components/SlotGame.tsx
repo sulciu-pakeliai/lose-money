@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import type { SlotSpinResult } from "../lib/session";
+import type { BetRecord, SlotSpinResult } from "../lib/session";
 
 const SYMBOL_MAP: Record<string, string> = {
     cherry:  "🍒",
@@ -25,6 +25,7 @@ const PAYOUT_TABLE = [
 type SlotGameProps = {
     balance: number;
     onSpin: (amount: number) => Promise<SlotSpinResult>;
+    onOutcomeReveal: (bet: BetRecord) => void;
 };
 
 const betOptions = [1, 5, 10, 25, 50, 100];
@@ -32,7 +33,7 @@ const minBet = 1;
 const maxBet = 10000;
 const randomSymbol = () => SYMBOL_NAMES[Math.floor(Math.random() * SYMBOL_NAMES.length)];
 
-export function SlotGame({ balance, onSpin }: SlotGameProps) {
+export function SlotGame({ balance, onSpin, onOutcomeReveal }: SlotGameProps) {
     const [reels, setReels] = useState<[string, string, string]>(["cherry", "cherry", "cherry"]);
     const [isSpinning, setIsSpinning] = useState(false);
     const [result, setResult] = useState<SlotSpinResult | null>(null);
@@ -64,6 +65,7 @@ export function SlotGame({ balance, onSpin }: SlotGameProps) {
             setTimeout(() => {
                 setReels(next.reels);
                 setResult(next);
+                onOutcomeReveal(next.bet);
                 setIsSpinning(false);
             }, 400);
         } catch (e) {

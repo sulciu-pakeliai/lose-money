@@ -1,10 +1,11 @@
 import { useState } from "react";
-import type { CoinFlipResult, CoinSide } from "../lib/session";
+import type { BetRecord, CoinFlipResult, CoinSide } from "../lib/session";
 
 type CoinFlipGameProps = {
     balance: number;
     onFlip: (choice: CoinSide, amount: number) => Promise<CoinFlipResult>;
     onOpenRules: () => void;
+    onOutcomeReveal: (bet: BetRecord) => void;
 };
 
 const betOptions = [1, 5, 10, 25, 50, 100];
@@ -12,7 +13,7 @@ const flipDurationMs = 2000;
 const minBet = 1;
 const maxBet = 10000;
 
-export function CoinFlipGame({ balance, onFlip, onOpenRules }: CoinFlipGameProps) {
+export function CoinFlipGame({ balance, onFlip, onOpenRules, onOutcomeReveal }: CoinFlipGameProps) {
     const [result, setResult] = useState<CoinSide | null>(null);
     const [pendingResult, setPendingResult] = useState<CoinSide | null>(null);
     const [isRequesting, setIsRequesting] = useState(false);
@@ -47,6 +48,7 @@ export function CoinFlipGame({ balance, onFlip, onOpenRules }: CoinFlipGameProps
 
             await new Promise(resolve => window.setTimeout(resolve, flipDurationMs));
             setResult(next);
+            onOutcomeReveal(response.bet);
         } catch (requestError) {
             setError(requestError instanceof Error ? requestError.message : "Unable to resolve flip");
         } finally {
