@@ -10,6 +10,7 @@ import {
     hitBlackjack,
     markNotificationsRead,
     submitDiceRoll,
+    submitRoulette,
     standBlackjack,
     startBlackjack,
     submitCoinFlip,
@@ -45,7 +46,7 @@ import { NotificationsCenter } from "./components/NotificationsCenter";
 import { AchievementUnlockToasts } from "./components/AchievementUnlockToasts";
 import { VisualAvatar } from "./components/VisualAvatar";
 
-type View = "lobby" | "missions" | "achievements" | "coinflip" | "dice" | "blackjack" | "history" | "topup" | "profile" | "notifications";
+type View = "lobby" | "missions" | "achievements" | "coinflip" | "dice" | "blackjack" | "roulette" | "history" | "topup" | "profile" | "notifications";
 
 export function App() {
     const [view, setView] = useState<View>("lobby");
@@ -409,6 +410,8 @@ export function App() {
                             onSelectCoinFlip={() => setView("coinflip")}
                             onSelectDice={() => setView("dice")}
                             onSelectBlackjack={() => setView("blackjack")}
+                            onSelectRoulette={() => setView("roulette")}
+                            onSelectSlots={() => setView("topup")}
                             onOpenMissions={() => setView("missions")}
                             onOpenAchievements={() => setView("achievements")}
                             missions={state.missions}
