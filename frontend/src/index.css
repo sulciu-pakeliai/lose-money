@@ -182,6 +182,96 @@ input[type="number"] {
   justify-content: center;
 }
 
+.roulette-board {
+  position: relative;
+  width: min(100%, 360px);
+  margin: 0 auto;
+}
+
+.roulette-wheel {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 9999px;
+  border: 3px solid rgba(255, 255, 255, 0.16);
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.06), rgba(15, 23, 42, 0.95) 58%);
+  overflow: hidden;
+}
+
+.roulette-wheel-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  transform-origin: center center;
+  transform-box: fill-box;
+  transition: transform 2.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.roulette-wheel-inner {
+  transform-box: fill-box;
+  transform-origin: center center;
+}
+
+.roulette-segment {
+  stroke: rgba(15, 23, 42, 0.85);
+  stroke-width: 0.5;
+}
+
+.roulette-segment-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  fill: rgba(248, 250, 252, 0.95);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
+}
+
+.roulette-center-plate {
+  fill: rgba(15, 23, 42, 0.95);
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 4;
+}
+
+.roulette-center-overlay {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 10rem;
+  height: 10rem;
+  transform: translate(-50%, -50%);
+  border-radius: 9999px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  pointer-events: none;
+}
+
+.roulette-pointer {
+  position: absolute;
+  left: 50%;
+  top: -10px;
+  width: 0;
+  height: 0;
+  border-left: 12px solid transparent;
+  border-right: 12px solid transparent;
+  border-top: 18px solid #f8fafc;
+  transform: translateX(-50%);
+  z-index: 10;
+}
+
+.roulette-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 10rem;
+  height: 10rem;
+  transform: translate(-50%, -50%);
+  border-radius: 9999px;
+  background: rgba(15, 23, 42, 0.95);
+  border: 4px solid rgba(255, 255, 255, 0.08);
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
 .dice-tray {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -1,4 +1,4 @@
-export type GameRuleKey = "coinflip" | "blackjack" | "dice";
+export type GameRuleKey = "coinflip" | "blackjack" | "dice" | "roulette";
 
 export type GameRuleDefinition = {
     eyebrow: string;
@@ -87,5 +87,29 @@ export const GAME_RULES: Record<GameRuleKey, GameRuleDefinition> = {
             },
         ],
         footer: "Low and high lose when the total lands on 7. Lucky 7 is the only way to cash that middle roll.",
+    },
+    roulette: {
+        eyebrow: "Quick Guide",
+        title: "How Roulette Works",
+        summary: "Spin the wheel and bet a single number or the color red/black for instant payouts.",
+        steps: [
+            {
+                title: "Choose your wager",
+                body: "Place a stake on a number from 0 to 36, or bet on red or black.",
+            },
+            {
+                title: "Spin the wheel",
+                body: "The backend generates the winning number and color, so the game result is always server authoritative.",
+            },
+            {
+                title: "Number bets pay big",
+                body: "A correct single-number bet pays 35:1, while red/black pays 1:1.",
+            },
+            {
+                title: "Zero is green",
+                body: "The green zero is only a win on a number bet and causes color bets to lose.",
+            },
+        ],
+        footer: "Tip: Use the wheel display to see the result and celebrate wins on number or color bets.",
     },
 };

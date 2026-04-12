@@ -136,6 +136,27 @@ export type DiceRollResult = {
     notifications: AppNotification[];
 };
 
+export type RouletteBetType = "number" | "color";
+
+export type RouletteSpinResult = {
+    number: number;
+    color: "red" | "black" | "green";
+    betType: RouletteBetType;
+    choice: string;
+    profitMultiplier: number;
+    won: boolean;
+};
+
+export type RouletteResult = {
+    session: Session;
+    bet: BetRecord;
+    spin: RouletteSpinResult;
+    topUp: TopUpPolicy;
+    missions: Mission[];
+    achievements: Achievement[];
+    notifications: AppNotification[];
+};
+
 export type TopUpResult = {
     session: Session;
     creditedAmount: number;
@@ -242,6 +263,16 @@ export async function submitDiceRoll(betType: DiceBetType, amount: number): Prom
             "Content-Type": "application/json",
         },
         body: JSON.stringify({ betType, amount }),
+    });
+}
+
+export async function submitRoulette(betType: RouletteBetType, choice: string, amount: number): Promise<RouletteResult> {
+    return apiFetch<RouletteResult>("/api/roulette", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ betType, choice, amount }),
     });
 }
 

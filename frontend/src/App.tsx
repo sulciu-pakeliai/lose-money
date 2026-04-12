@@ -22,6 +22,8 @@ import {
     type DiceBetType,
     type DiceRollResult,
     type MissionClaimResult,
+    type RouletteBetType,
+    type RouletteResult,
     type TopUpResult,
 } from "./lib/session";
 import { AuthModal } from "./components/AuthModal";
@@ -33,6 +35,7 @@ import { AchievementsBoard } from "./components/AchievementsBoard";
 import { CoinFlipGame } from "./components/CoinFlipGame";
 import { DiceGame } from "./components/DiceGame";
 import { BlackjackGame } from "./components/BlackjackGame";
+import { RouletteGame } from "./components/RouletteGame";
 import { BetHistory } from "./components/BetHistory";
 import { GameRulesModal } from "./components/GameRulesModal";
 import { TopUp } from "./components/TopUp";
@@ -208,6 +211,22 @@ export function App() {
         );
     };
 
+    const applyRoulette = (next: RouletteResult) => {
+        setState(current =>
+            current
+                ? {
+                    ...current,
+                    session: next.session,
+                    history: [next.bet, ...current.history].slice(0, 100),
+                    topUp: next.topUp,
+                    missions: next.missions,
+                    achievements: next.achievements,
+                    notifications: next.notifications,
+                }
+                : current,
+        );
+    };
+
     const applyBlackjack = (next: BlackjackActionResult) => {
         setState(current =>
             current
@@ -255,6 +274,12 @@ export function App() {
     const handleDiceRoll = async (betType: DiceBetType, amount: number) => {
         const next = await submitDiceRoll(betType, amount);
         applyDice(next);
+        return next;
+    };
+
+    const handleRoulette = async (betType: RouletteBetType, choice: string, amount: number) => {
+        const next = await submitRoulette(betType, choice, amount);
+        applyRoulette(next);
         return next;
     };
 
@@ -418,6 +443,14 @@ export function App() {
                             onHit={handleBlackjackHit}
                             onStand={handleBlackjackStand}
                             onOpenRules={() => openRules("blackjack")}
+                        />
+                    )}
+                    {!isLoading && state && view === "roulette" && (
+                        <RouletteGame
+                            balance={state.session.balance}
+                            onSpin={handleRoulette}
+                            onOpenRules={() => openRules("roulette")}
+                            onOutcomeReveal={setAvatarOutcome}
                         />
                     )}
                     {!isLoading && state && view === "history" && <BetHistory history={state.history} />}

@@ -4,7 +4,8 @@ type LobbyProps = {
     onSelectCoinFlip: () => void;
     onSelectDice: () => void;
     onSelectBlackjack: () => void;
-    onSelectSlots: () => void;   
+    onSelectRoulette: () => void;
+    onSelectSlots: () => void;
     onOpenMissions: () => void;
     onOpenAchievements: () => void;
     missions: Mission[];
@@ -34,11 +35,18 @@ const gameTiles = [
         onSelect: "blackjack",
     },
     {
-    title: "Lucky Reels",
-    subtitle: "Slot Machine",
-    accent: "from-rose-400 via-fuchsia-500 to-violet-500",
-    icon: "🎰",
-    onSelect: "slots",
+        title: "Roulette Royale",
+        subtitle: "Number and Color Bets",
+        accent: "from-rose-400 via-amber-400 to-yellow-300",
+        icon: "🎡",
+        onSelect: "roulette",
+    },
+    {
+        title: "Lucky Reels",
+        subtitle: "Slot Machine",
+        accent: "from-rose-400 via-fuchsia-500 to-violet-500",
+        icon: "🎰",
+        onSelect: "slots",
     },
 ] as const;
 
@@ -46,6 +54,7 @@ export function Lobby({
     onSelectCoinFlip,
     onSelectDice,
     onSelectBlackjack,
+    onSelectRoulette,
     onSelectSlots,
     onOpenMissions,
     onOpenAchievements,
@@ -76,6 +85,7 @@ export function Lobby({
                         onClick={tile.onSelect === "coinflip" ? onSelectCoinFlip : 
                             tile.onSelect === "dice" ? onSelectDice : 
                             tile.onSelect === "blackjack" ? onSelectBlackjack : 
+                            tile.onSelect === "roulette" ? onSelectRoulette : 
                             onSelectSlots}
                         className="group relative overflow-hidden rounded-3xl border border-white/10 bg-linear-to-br from-slate-950/70 via-slate-900/70 to-slate-950/80 p-6 text-left transition hover:-translate-y-1 hover:border-white/20 hover:shadow-[0_25px_60px_rgba(14,116,144,0.35)]"
                         type="button"
