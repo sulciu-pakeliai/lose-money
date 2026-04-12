@@ -49,9 +49,11 @@ function randomDieFace() {
 }
 
 function DiceFace({ value, rolling = false }: { value: number; rolling?: boolean }) {
+    const layout: Array<[number, number]> = pipLayouts[value] ?? [[50, 50]];
+
     return (
         <div className={`die-face ${rolling ? "die-face-rolling" : ""}`}>
-            {pipLayouts[value].map(([left, top], index) => (
+            {layout.map(([left, top], index) => (
                 <span
                     key={`${value}-${left}-${top}-${index}`}
                     className="die-pip"
@@ -134,7 +136,7 @@ export function DiceGame({ balance, onRoll, onOpenRules, onOutcomeReveal }: Dice
     const outcomeTone = roll ? (roll.won ? "win" : "loss") : "idle";
 
     return (
-        <section className="page-swap page-from-right w-full max-w-4xl overflow-hidden rounded-4xl border border-amber-300/20 bg-[radial-gradient(circle_at_top,rgba(120,53,15,0.68),rgba(41,37,36,0.92)_38%,rgba(15,23,42,0.98)_100%)] p-6 shadow-[0_40px_120px_rgba(2,6,23,0.45)]">
+        <section className="page-swap page-from-right w-full max-w-5xl overflow-hidden rounded-4xl border border-amber-300/20 bg-[radial-gradient(circle_at_top,rgba(120,53,15,0.68),rgba(41,37,36,0.92)_38%,rgba(15,23,42,0.98)_100%)] p-6 shadow-[0_40px_120px_rgba(2,6,23,0.45)]">
             <div className="flex flex-col gap-6">
                 <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                     <div>
