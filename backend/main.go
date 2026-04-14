@@ -157,8 +157,7 @@ func main() {
 	mux.HandleFunc("POST /api/notifications/read", app.handleNotificationsRead)
 	mux.HandleFunc("POST /api/coinflip", app.handleCoinFlip)
 	mux.HandleFunc("POST /api/dice", app.handleDiceRoll)
-	// TODO: set the request type
-	mux.HandleFunc("/api/roulette", app.handleRoulette)
+	mux.HandleFunc("POST /api/roulette", app.handleRoulette)
 	mux.HandleFunc("POST /api/top-up", app.handleTopUp)
 	mux.HandleFunc("POST /api/missions/claim", app.handleMissionClaim)
 	mux.HandleFunc("POST /api/blackjack/start", app.handleBlackjackStart)
