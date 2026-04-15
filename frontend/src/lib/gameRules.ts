@@ -1,4 +1,4 @@
-export type GameRuleKey = "coinflip" | "blackjack" | "dice" | "roulette";
+export type GameRuleKey = "coinflip" | "blackjack" | "dice" | "roulette" | "crash";
 
 export type GameRuleDefinition = {
     eyebrow: string;
@@ -111,5 +111,29 @@ export const GAME_RULES: Record<GameRuleKey, GameRuleDefinition> = {
             },
         ],
         footer: "Tip: Use the wheel display to see the result and celebrate wins on number or color bets.",
+    },
+    crash: {
+        eyebrow: "Quick Guide",
+        title: "How Crash Works",
+        summary: "A live multiplier climbs from 1.00x until it crashes. Cash out before the break to lock the payout.",
+        steps: [
+            {
+                title: "Place a bet",
+                body: "Starting a round reserves your wager immediately, so the balance already reflects the active risk.",
+            },
+            {
+                title: "Watch the multiplier",
+                body: "The rocket climbs while the payout grows. The crash point is seeded on the backend when the round starts.",
+            },
+            {
+                title: "Cash out in time",
+                body: "Manual cashout settles at the current multiplier. Auto mode can trigger cashout when your target is reached.",
+            },
+            {
+                title: "Crash means loss",
+                body: "If the round crashes before cashout, the reserved wager is lost and the result is recorded in history.",
+            },
+        ],
+        footer: "Higher multipliers are possible, but waiting longer also leaves less room before the crash.",
     },
 };

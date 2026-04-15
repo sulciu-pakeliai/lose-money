@@ -39,13 +39,13 @@ type rouletteSpinSummary struct {
 }
 
 type rouletteResponse struct {
-	Session       sessionDTO        `json:"session"`
-	Bet           betRecord         `json:"bet"`
+	Session       sessionDTO          `json:"session"`
+	Bet           betRecord           `json:"bet"`
 	Spin          rouletteSpinSummary `json:"spin"`
-	TopUp         topUpPolicy       `json:"topUp"`
-	Missions      []missionDTO      `json:"missions"`
-	Achievements  []achievementDTO  `json:"achievements"`
-	Notifications []notificationDTO `json:"notifications"`
+	TopUp         topUpPolicy         `json:"topUp"`
+	Missions      []missionDTO        `json:"missions"`
+	Achievements  []achievementDTO    `json:"achievements"`
+	Notifications []notificationDTO   `json:"notifications"`
 }
 
 type rouletteResolution struct {
@@ -268,6 +268,9 @@ func normalizeRouletteChoice(raw string) string {
 		return ""
 	}
 	if number < 0 || number > 36 {
+		return ""
+	}
+	if value != strconv.Itoa(number) {
 		return ""
 	}
 	return strconv.Itoa(number)

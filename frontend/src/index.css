@@ -756,6 +756,215 @@ input[type="number"] {
   gap: 0.75rem;
 }
 
+.crash-main {
+  display: flex;
+  min-height: 32rem;
+  flex-direction: column;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top, rgba(16, 185, 129, 0.18), transparent 42%),
+    linear-gradient(180deg, rgba(10, 18, 31, 0.96), rgba(3, 7, 18, 0.96));
+}
+
+.crash-stage {
+  position: relative;
+  height: clamp(26rem, 58vh, 34rem);
+  margin: 1rem 1.25rem;
+  overflow: hidden;
+  border-radius: 1.25rem;
+  background:
+    linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+    radial-gradient(circle at 74% 24%, rgba(132, 204, 22, 0.12), transparent 30%),
+    rgba(2, 6, 23, 0.28);
+  background-size: 100% 25%, 25% 100%, auto, auto;
+}
+
+.crash-stage::before {
+  content: "";
+  position: absolute;
+  left: 7%;
+  right: 7%;
+  bottom: 12%;
+  height: 1px;
+  background: rgba(226, 232, 240, 0.18);
+}
+
+.crash-axis {
+  position: absolute;
+  z-index: 2;
+  color: rgba(203, 213, 225, 0.58);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.crash-axis-y {
+  left: 0.8rem;
+  top: 12%;
+  bottom: 13%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.crash-axis-x {
+  left: 9%;
+  right: 8%;
+  bottom: 5%;
+  display: flex;
+  justify-content: space-between;
+}
+
+.crash-curve {
+  position: absolute;
+  inset: 7% 5% 9% 6%;
+  z-index: 3;
+  overflow: visible;
+}
+
+.crash-curve-shadow,
+.crash-curve-line {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.crash-curve-shadow {
+  stroke: rgba(15, 23, 42, 0.52);
+  stroke-width: 9;
+}
+
+.crash-curve-line {
+  stroke-width: 4;
+  filter: drop-shadow(0 0 16px rgba(52, 211, 153, 0.32));
+}
+
+.crash-curve-live {
+  stroke: rgb(132, 204, 22);
+}
+
+.crash-curve-win {
+  stroke: rgb(45, 212, 191);
+}
+
+.crash-curve-loss {
+  stroke: rgb(251, 113, 133);
+}
+
+.crash-rocket {
+  position: absolute;
+  z-index: 5;
+  width: 2.2rem;
+  height: 0.9rem;
+  border-radius: 9999px 0.65rem 0.65rem 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background:
+    radial-gradient(circle at 70% 50%, rgba(15, 23, 42, 0.95) 0 0.18rem, rgba(255, 255, 255, 0.92) 0.2rem 0.34rem, transparent 0.36rem),
+    linear-gradient(90deg, rgb(226, 232, 240), rgb(94, 234, 212));
+  box-shadow: 0 16px 34px rgba(2, 6, 23, 0.35), 0 0 24px rgba(132, 204, 22, 0.26);
+  transform: translate(-50%, -50%) rotate(-38deg);
+}
+
+.crash-rocket::before,
+.crash-rocket::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.crash-rocket::before {
+  left: -0.6rem;
+  top: 50%;
+  width: 0.85rem;
+  height: 0.34rem;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, rgba(251, 113, 133, 0), rgba(251, 191, 36, 0.92), rgba(132, 204, 22, 0.86));
+  filter: blur(0.5px);
+  transform: translateY(-50%);
+}
+
+.crash-rocket::after {
+  right: 0.55rem;
+  bottom: -0.42rem;
+  width: 0;
+  height: 0;
+  border-left: 0.36rem solid transparent;
+  border-right: 0.36rem solid transparent;
+  border-top: 0.5rem solid rgba(45, 212, 191, 0.76);
+}
+
+.crash-rocket-live {
+  animation: crash-rocket-thrust 520ms ease-in-out infinite;
+}
+
+.crash-rocket-win {
+  border-color: rgba(94, 234, 212, 0.42);
+  background:
+    radial-gradient(circle at 70% 50%, rgba(15, 23, 42, 0.95) 0 0.18rem, rgba(255, 255, 255, 0.92) 0.2rem 0.34rem, transparent 0.36rem),
+    linear-gradient(90deg, rgb(226, 232, 240), rgb(45, 212, 191));
+}
+
+.crash-rocket-loss {
+  border-color: rgba(251, 113, 133, 0.42);
+  background:
+    radial-gradient(circle at 70% 50%, rgba(15, 23, 42, 0.95) 0 0.18rem, rgba(255, 255, 255, 0.92) 0.2rem 0.34rem, transparent 0.36rem),
+    linear-gradient(90deg, rgb(226, 232, 240), rgb(251, 113, 133));
+  animation: table-loss-flash 700ms ease;
+}
+
+.crash-multiplier {
+  position: absolute;
+  left: 50%;
+  top: 48%;
+  z-index: 4;
+  transform: translate(-50%, -50%);
+  font-family: "Rajdhani", "Segoe UI", sans-serif;
+  font-size: clamp(4rem, 14vw, 7.5rem);
+  font-weight: 700;
+  line-height: 1;
+  text-shadow: 0 18px 42px rgba(2, 6, 23, 0.55);
+}
+
+.crash-multiplier-live {
+  color: rgb(190, 242, 100);
+}
+
+.crash-multiplier-win {
+  color: rgb(94, 234, 212);
+}
+
+.crash-multiplier-loss {
+  color: rgb(251, 113, 133);
+}
+
+.crash-status {
+  position: absolute;
+  left: 50%;
+  top: calc(48% + 4.2rem);
+  z-index: 6;
+  transform: translateX(-50%);
+  min-width: 7.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 23, 42, 0.78);
+  padding: 0.75rem 1rem;
+  text-align: center;
+  color: rgba(241, 245, 249, 0.9);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.crash-status-win {
+  border-color: rgba(94, 234, 212, 0.35);
+}
+
+.crash-status-loss {
+  border-color: rgba(251, 113, 133, 0.35);
+}
+
 .rules-backdrop {
   animation: rules-fade-in 220ms ease both;
 }
@@ -965,6 +1174,18 @@ input[type="number"] {
     opacity: 1;
     transform: translateY(0) scale(1);
     filter: blur(0);
+  }
+}
+
+@keyframes crash-rocket-thrust {
+  0% {
+    transform: translate(-50%, -50%) rotate(-38deg) scale(1);
+  }
+  50% {
+    transform: translate(-50%, -54%) rotate(-38deg) scale(1.04);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(-38deg) scale(1);
   }
 }
 

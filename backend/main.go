@@ -86,6 +86,7 @@ type stateResponse struct {
 	Achievements  []achievementDTO    `json:"achievements"`
 	Notifications []notificationDTO   `json:"notifications"`
 	Blackjack     *blackjackGameState `json:"blackjack,omitempty"`
+	Crash         *crashGameState     `json:"crash,omitempty"`
 }
 
 type coinFlipRequest struct {
@@ -165,6 +166,8 @@ func main() {
 	mux.HandleFunc("POST /api/blackjack/stand", app.handleBlackjackStand)
 	mux.HandleFunc("GET /api/profile", app.handleProfile)
 	mux.HandleFunc("POST /api/slots/spin", app.handleSlotSpin)
+	mux.HandleFunc("POST /api/crash/start", app.handleCrashStart)
+	mux.HandleFunc("POST /api/crash/cashout", app.handleCrashCashout)
 
 	server := &http.Server{
 		Addr:              ":" + port,
@@ -331,6 +334,23 @@ CREATE UNIQUE INDEX IF NOT EXISTS blackjack_active_session_idx
     ON blackjack_games(session_id)
     WHERE status = 'active';
 
+CREATE TABLE IF NOT EXISTS crash_games (
+    id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+    bet_amount BIGINT NOT NULL,
+    crash_multiplier_cents BIGINT NOT NULL,
+    cashout_multiplier_cents BIGINT,
+    payout BIGINT,
+    status TEXT NOT NULL,
+    started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    completed_at TIMESTAMPTZ
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS crash_active_session_idx
+    ON crash_games(session_id)
+    WHERE status = 'active';
+
 ALTER TABLE sessions ADD COLUMN IF NOT EXISTS user_id TEXT REFERENCES users(id);
 CREATE INDEX IF NOT EXISTS sessions_user_idx ON sessions(user_id);
 `
@@ -362,6 +382,12 @@ func (a *application) handleState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	crash, err := a.loadActiveCrash(r.Context(), session.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load crash state")
+		return
+	}
+
 	missions, err := a.loadDailyMissions(r.Context(), session.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to load missions")
@@ -388,6 +414,7 @@ func (a *application) handleState(w http.ResponseWriter, r *http.Request) {
 		Achievements:  achievements,
 		Notifications: notifications,
 		Blackjack:     blackjack,
+		Crash:         crash,
 	})
 }
 
@@ -891,6 +918,8 @@ func calculateXPReward(game string, amount int64, outcome string, status string)
 		}
 	} else if game == "dice" && status == "exact_seven" {
 		statusBonus = 18
+	} else if game == "crash" && status == "cashout" {
+		statusBonus = 16
 	}
 
 	return base + volumeBonus + outcomeBonus + statusBonus

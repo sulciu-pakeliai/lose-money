@@ -5,6 +5,7 @@ type LobbyProps = {
     onSelectDice: () => void;
     onSelectBlackjack: () => void;
     onSelectRoulette: () => void;
+    onSelectCrash: () => void;
     onSelectSlots: () => void;
     onOpenMissions: () => void;
     onOpenAchievements: () => void;
@@ -42,6 +43,13 @@ const gameTiles = [
         onSelect: "roulette",
     },
     {
+        title: "Crash",
+        subtitle: "Multiplier Game",
+        accent: "from-lime-300 via-emerald-400 to-cyan-500",
+        icon: "🚀",
+        onSelect: "crash",
+    },
+    {
         title: "Lucky Reels",
         subtitle: "Slot Machine",
         accent: "from-rose-400 via-fuchsia-500 to-violet-500",
@@ -55,6 +63,7 @@ export function Lobby({
     onSelectDice,
     onSelectBlackjack,
     onSelectRoulette,
+    onSelectCrash,
     onSelectSlots,
     onOpenMissions,
     onOpenAchievements,
@@ -86,6 +95,7 @@ export function Lobby({
                             tile.onSelect === "dice" ? onSelectDice : 
                             tile.onSelect === "blackjack" ? onSelectBlackjack : 
                             tile.onSelect === "roulette" ? onSelectRoulette : 
+                            tile.onSelect === "crash" ? onSelectCrash :
                             onSelectSlots}
                         className="group relative overflow-hidden rounded-3xl border border-white/10 bg-linear-to-br from-slate-950/70 via-slate-900/70 to-slate-950/80 p-6 text-left transition hover:-translate-y-1 hover:border-white/20 hover:shadow-[0_25px_60px_rgba(14,116,144,0.35)]"
                         type="button"

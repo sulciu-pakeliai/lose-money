@@ -9,8 +9,10 @@ import {
     fetchState,
     hitBlackjack,
     markNotificationsRead,
+    cashOutCrashRound,
     submitDiceRoll,
     submitRoulette,
+    startCrashRound,
     standBlackjack,
     startBlackjack,
     submitCoinFlip,
@@ -20,6 +22,8 @@ import {
     type BlackjackActionResult,
     type CoinSide,
     type CoinFlipResult,
+    type CrashCashoutResult,
+    type CrashStartResult,
     type DiceBetType,
     type DiceRollResult,
     type MissionClaimResult,
@@ -37,6 +41,7 @@ import { CoinFlipGame } from "./components/CoinFlipGame";
 import { DiceGame } from "./components/DiceGame";
 import { BlackjackGame } from "./components/BlackjackGame";
 import { RouletteGame } from "./components/RouletteGame";
+import { CrashGame } from "./components/CrashGame";
 import { BetHistory } from "./components/BetHistory";
 import { GameRulesModal } from "./components/GameRulesModal";
 import { TopUp } from "./components/TopUp";
@@ -46,7 +51,7 @@ import { NotificationsCenter } from "./components/NotificationsCenter";
 import { AchievementUnlockToasts } from "./components/AchievementUnlockToasts";
 import { VisualAvatar } from "./components/VisualAvatar";
 
-type View = "lobby" | "missions" | "achievements" | "coinflip" | "dice" | "blackjack" | "roulette" | "history" | "topup" | "profile" | "notifications";
+type View = "lobby" | "missions" | "achievements" | "coinflip" | "dice" | "blackjack" | "roulette" | "crash" | "history" | "topup" | "profile" | "notifications";
 
 export function App() {
     const [view, setView] = useState<View>("lobby");
@@ -83,7 +88,7 @@ export function App() {
     }, []);
 
     useEffect(() => {
-        if (view !== "coinflip" && view !== "blackjack" && view !== "dice") {
+        if (view !== "coinflip" && view !== "blackjack" && view !== "dice" && view !== "crash") {
             return;
         }
 
@@ -228,6 +233,39 @@ export function App() {
         );
     };
 
+    const applyCrashStart = (next: CrashStartResult) => {
+        setState(current =>
+            current
+                ? {
+                    ...current,
+                    session: next.session,
+                    crash: next.crash,
+                    topUp: next.topUp,
+                    missions: next.missions,
+                    achievements: next.achievements,
+                    notifications: next.notifications,
+                }
+                : current,
+        );
+    };
+
+    const applyCrashCashout = (next: CrashCashoutResult) => {
+        setState(current =>
+            current
+                ? {
+                    ...current,
+                    session: next.session,
+                    crash: next.crash,
+                    history: [next.bet, ...current.history].slice(0, 100),
+                    topUp: next.topUp,
+                    missions: next.missions,
+                    achievements: next.achievements,
+                    notifications: next.notifications,
+                }
+                : current,
+        );
+    };
+
     const applyBlackjack = (next: BlackjackActionResult) => {
         setState(current =>
             current
@@ -281,6 +319,18 @@ export function App() {
     const handleRoulette = async (betType: RouletteBetType, choice: string, amount: number) => {
         const next = await submitRoulette(betType, choice, amount);
         applyRoulette(next);
+        return next;
+    };
+
+    const handleCrashStart = async (amount: number) => {
+        const next = await startCrashRound(amount);
+        applyCrashStart(next);
+        return next;
+    };
+
+    const handleCrashCashout = async () => {
+        const next = await cashOutCrashRound();
+        applyCrashCashout(next);
         return next;
     };
 
@@ -411,6 +461,7 @@ export function App() {
                             onSelectDice={() => setView("dice")}
                             onSelectBlackjack={() => setView("blackjack")}
                             onSelectRoulette={() => setView("roulette")}
+                            onSelectCrash={() => setView("crash")}
                             onSelectSlots={() => setView("topup")}
                             onOpenMissions={() => setView("missions")}
                             onOpenAchievements={() => setView("achievements")}
@@ -453,6 +504,16 @@ export function App() {
                             balance={state.session.balance}
                             onSpin={handleRoulette}
                             onOpenRules={() => openRules("roulette")}
+                            onOutcomeReveal={setAvatarOutcome}
+                        />
+                    )}
+                    {!isLoading && state && view === "crash" && (
+                        <CrashGame
+                            balance={state.session.balance}
+                            game={state.crash ?? null}
+                            onStart={handleCrashStart}
+                            onCashout={handleCrashCashout}
+                            onOpenRules={() => openRules("crash")}
                             onOutcomeReveal={setAvatarOutcome}
                         />
                     )}

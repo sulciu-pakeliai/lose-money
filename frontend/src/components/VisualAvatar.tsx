@@ -15,12 +15,14 @@ type AvatarView =
     | "coinflip"
     | "dice"
     | "blackjack"
+    | "roulette"
     | "slots"
+    | "crash"
     | "history"
     | "topup"
     | "profile"
     | "notifications";
-type AvatarGameKey = "coinflip" | "dice" | "blackjack" | "slots";
+type AvatarGameKey = "coinflip" | "dice" | "blackjack" | "roulette" | "slots" | "crash";
 
 type DialogueBeat = {
     emotion: AvatarEmotion;
@@ -58,7 +60,9 @@ type DialogueFactory = (event: BetRecord, gameLabel: string) => DialogueBeat[];
 const gameLabels: Record<AvatarGameKey, string> = {
     blackjack: "blackjack hand",
     coinflip: "coin flip",
+    crash: "crash round",
     dice: "dice roll",
+    roulette: "roulette spin",
     slots: "slot spin",
 };
 
@@ -160,8 +164,13 @@ function normalizeGameKey(game: string): AvatarGameKey | null {
             return "dice";
         case "blackjack":
             return "blackjack";
+        case "roulette":
+        case "rouletteroyale":
+            return "roulette";
         case "slots":
             return "slots";
+        case "crash":
+            return "crash";
         default:
             return null;
     }
@@ -217,11 +226,25 @@ function getPostOutcomeRecommendation(event: BetRecord, gameKey: AvatarGameKey):
                 line: event.outcome === "win" ? "Next hand: keep the same posture. It looked expensive." : "Next hand: calmer totals, fewer haunted decisions.",
                 durationMs: 6200,
             };
+        case "roulette":
+            return {
+                emotion: event.outcome === "win" ? "happy" : "neutral",
+                animation: "talk",
+                line: event.outcome === "win" ? "Next spin: same nerve, less speech." : "Next spin: pick a lane and let the wheel do its little speech.",
+                durationMs: 6400,
+            };
         case "slots":
             return {
                 emotion: event.outcome === "win" ? "happy" : "neutral",
                 animation: "talk",
                 line: event.outcome === "win" ? "Next spin: same wager once, then act disciplined." : "Next spin: smaller wager. Make the machine work harder for the drama.",
+                durationMs: 6600,
+            };
+        case "crash":
+            return {
+                emotion: event.outcome === "win" ? "happy" : "surprised",
+                animation: "talk",
+                line: event.outcome === "win" ? "Next launch: profit first, hero speech later." : "Next launch: the curve was rude. We can be ruder with timing.",
                 durationMs: 6600,
             };
     }
@@ -496,6 +519,26 @@ function getScene({
                 { emotion: "happy", animation: "talk", line: "Three matching symbols would be tasteful. Please inform the machine.", durationMs: 6400 },
                 { emotion: "neutral", animation: "idle", line: "A break-even cherry line is still a story with punctuation.", durationMs: 6200 },
             ],
+        };
+    }
+
+    if (view === "crash") {
+        const activeCrash = state.crash?.status === "active" ? state.crash : null;
+        return {
+            signature: activeCrash
+                ? `crash-live-${activeCrash.id}-${activeCrash.betAmount}-${Math.floor(activeCrash.elapsedMs / 500)}`
+                : `crash-idle-${state.session.balance}-${claimableMissions}`,
+            beats: activeCrash
+                ? [
+                    { emotion: "surprised", animation: "react", line: "The multiplier is climbing. Decide before the rocket develops opinions.", durationMs: 5200 },
+                    { emotion: "neutral", animation: "talk", line: "Cashout is not cowardice. It is profit with an exit plan.", durationMs: 6200 },
+                    { emotion: "angry", animation: "talk", line: "Do not stare at the curve like it owes you friendship.", durationMs: 5800 },
+                ]
+                : [
+                    { emotion: "happy", animation: "talk", line: "Crash is simple. Bet, lift off, leave before gravity notices.", durationMs: 5800 },
+                    { emotion: "neutral", animation: "idle", line: "A clean 2x feels good. A greedy 20x tells stories in past tense.", durationMs: 6600 },
+                    { emotion: "surprised", animation: "react", line: "Auto cashout is discipline with a timer.", durationMs: 5600 },
+                ],
         };
     }
 

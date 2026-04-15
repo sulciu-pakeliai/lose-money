@@ -69,7 +69,7 @@ export type Mission = {
     groupName: string;
     title: string;
     description: string;
-    gameScope: "all" | "coinflip" | "blackjack" | "dice";
+    gameScope: "all" | "coinflip" | "blackjack" | "dice" | "slots" | "crash";
     target: number;
     progress: number;
     rewardBalance: number;
@@ -86,7 +86,7 @@ export type Achievement = {
     groupName: string;
     title: string;
     description: string;
-    gameScope: "all" | "coinflip" | "blackjack" | "dice";
+    gameScope: "all" | "coinflip" | "blackjack" | "dice" | "slots" | "crash";
     rarity: "common" | "uncommon" | "rare" | "epic";
     accent: "copper" | "cyan" | "emerald" | "rose" | "gold";
     iconLabel: string;
@@ -115,6 +115,7 @@ export type AppState = {
     achievements: Achievement[];
     notifications: AppNotification[];
     blackjack?: BlackjackGameState | null;
+    crash?: CrashGameState | null;
 };
 
 export type CoinFlipResult = {
@@ -204,6 +205,42 @@ export type SlotSpinResult = {
     outcome: "win" | "loss";
     multiplier: number;
     payout: number;
+    topUp: TopUpPolicy;
+    missions: Mission[];
+    achievements: Achievement[];
+    notifications: AppNotification[];
+};
+
+export type CrashGameState = {
+    id: string;
+    betAmount: number;
+    crashMultiplier: number;
+    cashoutMultiplier?: number;
+    payout?: number;
+    status: "active" | "cashed_out" | "crashed";
+    startedAt: string;
+    crashAfterMs: number;
+    elapsedMs: number;
+    currentMultiplier: number;
+    canCashout: boolean;
+    message: string;
+    completedAt?: string;
+    balanceReserved: boolean;
+};
+
+export type CrashStartResult = {
+    session: Session;
+    crash: CrashGameState;
+    topUp: TopUpPolicy;
+    missions: Mission[];
+    achievements: Achievement[];
+    notifications: AppNotification[];
+};
+
+export type CrashCashoutResult = {
+    session: Session;
+    crash: CrashGameState;
+    bet: BetRecord;
     topUp: TopUpPolicy;
     missions: Mission[];
     achievements: Achievement[];
@@ -359,5 +396,19 @@ export async function submitSlotSpin(amount: number): Promise<SlotSpinResult> {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount }),
+    });
+}
+
+export async function startCrashRound(amount: number): Promise<CrashStartResult> {
+    return apiFetch<CrashStartResult>("/api/crash/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount }),
+    });
+}
+
+export async function cashOutCrashRound(): Promise<CrashCashoutResult> {
+    return apiFetch<CrashCashoutResult>("/api/crash/cashout", {
+        method: "POST",
     });
 }
