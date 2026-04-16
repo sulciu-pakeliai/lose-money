@@ -88,10 +88,16 @@ export function RouletteGame({ balance, onSpin, onOpenRules, onOutcomeReveal }: 
         }
 
         const extraSpin = 5 * 360;
-        const targetRotation = extraSpin - targetIndex * segmentAngle - segmentAngle / 2;
+        const desiredRotation = -(targetIndex + 0.5) * segmentAngle;
+
         setIsSpinning(true);
         setRevealOutcome(false);
-        setRotation(prev => prev + targetRotation);
+        setRotation((prev: number) => {
+            const currentModulo = ((prev % 360) + 360) % 360;
+            const normalizedDesired = ((desiredRotation % 360) + 360) % 360;
+            const additionalRotation = extraSpin + ((normalizedDesired - currentModulo + 360) % 360);
+            return prev + additionalRotation;
+        });
 
         let revealTimeout: number | undefined;
         const spinTimeout = window.setTimeout(() => {
@@ -129,7 +135,7 @@ export function RouletteGame({ balance, onSpin, onOpenRules, onOutcomeReveal }: 
         }
     };
 
-    const selectedNumber = spinResult?.spin.number ?? 0;
+    const selectedNumber = spinResult?.spin.number;
     const selectedColor = spinResult?.spin.color ?? "green";
     const resultTone = spinResult && revealOutcome ? (spinResult.bet.outcome === "win" ? "win" : "loss") : "idle";
 
@@ -159,15 +165,25 @@ export function RouletteGame({ balance, onSpin, onOpenRules, onOutcomeReveal }: 
                             : "border-fuchsia-300/30 bg-fuchsia-300/10 text-fuchsia-100"
                     }`}>
                         {spinResult ? (
-                            <>
-                                <div className="text-sm uppercase tracking-[0.3em] text-slate-200">Result</div>
-                                <div className="mt-2 text-3xl font-display text-white">
-                                    {spinResult.spin.number} {formatRouletteLabel(spinResult.spin.color)}
-                                </div>
-                                <div className="mt-3 text-sm uppercase tracking-[0.3em] text-white/70">
-                                    {revealOutcome ? (spinResult.bet.outcome === "win" ? "Winner" : "Missed") : "Determining outcome..."}
-                                </div>
-                            </>
+                            revealOutcome ? (
+                                <>
+                                    <div className="text-sm uppercase tracking-[0.3em] text-slate-200">Result</div>
+                                    <div className="mt-2 text-3xl font-display text-white">
+                                        {spinResult.spin.number} {formatRouletteLabel(spinResult.spin.color)}
+                                    </div>
+                                    <div className="mt-3 text-sm uppercase tracking-[0.3em] text-white/70">
+                                        {spinResult.bet.outcome === "win" ? "Winner" : "Missed"}
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="text-sm uppercase tracking-[0.3em] text-slate-200">Spinning</div>
+                                    <div className="mt-2 text-3xl font-display text-white">Please wait…</div>
+                                    <div className="mt-3 text-sm uppercase tracking-[0.3em] text-white/70">
+                                        Wheel is spinning, outcome will appear after it stops.
+                                    </div>
+                                </>
+                            )
                         ) : (
                             <span>Choose a number or color, place your wager, and spin the wheel.</span>
                         )}
@@ -213,14 +229,14 @@ export function RouletteGame({ balance, onSpin, onOpenRules, onOutcomeReveal }: 
                                 </svg>
                                 <div className="roulette-center-overlay">
                                     <div className="text-xs uppercase tracking-[0.3em] text-slate-400">Win</div>
-                                    <div className="mt-1 text-5xl font-display text-white">{selectedNumber}</div>
-                                    <div className="mt-1 text-xs uppercase tracking-[0.28em] text-slate-300">{formatRouletteLabel(selectedColor)}</div>
+                                    <div className="mt-1 text-5xl font-display text-white">{revealOutcome ? selectedNumber : "--"}</div>
+                                    <div className="mt-1 text-xs uppercase tracking-[0.28em] text-slate-300">{revealOutcome ? formatRouletteLabel(selectedColor) : "Spinning..."}</div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {spinResult && (
+                    {spinResult && revealOutcome && (
                         <div className="result-pop rounded-3xl border px-5 py-4 bg-white/5 text-white/90">
                             <div className="flex items-center justify-between gap-4 text-sm uppercase tracking-[0.24em] text-slate-300">
                                 <span>Result</span>
