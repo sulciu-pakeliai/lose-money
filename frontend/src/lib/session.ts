@@ -69,7 +69,7 @@ export type Mission = {
     groupName: string;
     title: string;
     description: string;
-    gameScope: "all" | "coinflip" | "blackjack" | "dice" | "slots" | "crash";
+    gameScope: "all" | "coinflip" | "blackjack" | "dice" | "slots" | "crash" | "mines";
     target: number;
     progress: number;
     rewardBalance: number;
@@ -86,7 +86,7 @@ export type Achievement = {
     groupName: string;
     title: string;
     description: string;
-    gameScope: "all" | "coinflip" | "blackjack" | "dice" | "slots" | "crash";
+    gameScope: "all" | "coinflip" | "blackjack" | "dice" | "slots" | "crash" | "mines";
     rarity: "common" | "uncommon" | "rare" | "epic";
     accent: "copper" | "cyan" | "emerald" | "rose" | "gold";
     iconLabel: string;
@@ -116,6 +116,7 @@ export type AppState = {
     notifications: AppNotification[];
     blackjack?: BlackjackGameState | null;
     crash?: CrashGameState | null;
+    mines?: MinesGameState | null;
 };
 
 export type CoinFlipResult = {
@@ -241,6 +242,33 @@ export type CrashCashoutResult = {
     session: Session;
     crash: CrashGameState;
     bet: BetRecord;
+    topUp: TopUpPolicy;
+    missions: Mission[];
+    achievements: Achievement[];
+    notifications: AppNotification[];
+};
+
+export type MinesGameState = {
+    id: string;
+    betAmount: number;
+    gridSize: number;
+    mineCount: number;
+    revealedCells: number[];
+    minePositions?: number[];
+    safeReveals: number;
+    currentMultiplier: number;
+    potentialPayout: number;
+    status: "active" | "cashed_out" | "exploded";
+    message: string;
+    canCashout: boolean;
+    startedAt: string;
+    completedAt?: string;
+};
+
+export type MinesActionResult = {
+    session: Session;
+    mines: MinesGameState;
+    bet?: BetRecord;
     topUp: TopUpPolicy;
     missions: Mission[];
     achievements: Achievement[];
@@ -409,6 +437,28 @@ export async function startCrashRound(amount: number): Promise<CrashStartResult>
 
 export async function cashOutCrashRound(): Promise<CrashCashoutResult> {
     return apiFetch<CrashCashoutResult>("/api/crash/cashout", {
+        method: "POST",
+    });
+}
+
+export async function startMinesRound(amount: number, mineCount: number): Promise<MinesActionResult> {
+    return apiFetch<MinesActionResult>("/api/mines/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount, mineCount }),
+    });
+}
+
+export async function revealMinesCell(cell: number): Promise<MinesActionResult> {
+    return apiFetch<MinesActionResult>("/api/mines/reveal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cell }),
+    });
+}
+
+export async function cashOutMinesRound(): Promise<MinesActionResult> {
+    return apiFetch<MinesActionResult>("/api/mines/cashout", {
         method: "POST",
     });
 }

@@ -16,6 +16,7 @@ const (
 	missionScopeBlackjack = "blackjack"
 	missionScopeDice      = "dice"
 	missionScopeRoulette  = "roulette"
+	missionScopeMines     = "mines"
 
 	missionMetricRounds = "rounds_played"
 	missionMetricWins   = "wins"
@@ -233,6 +234,42 @@ var diceMissionTemplates = []missionTemplate{
 		Target:        180,
 		RewardBalance: 190,
 		RewardXP:      42,
+	},
+}
+
+var minesMissionTemplates = []missionTemplate{
+	{
+		TemplateKey:   "mines_rounds_3",
+		GroupName:     "Mines",
+		Title:         "Careful Steps",
+		Description:   "Finish 3 Mines rounds.",
+		GameScope:     missionScopeMines,
+		Metric:        missionMetricRounds,
+		Target:        3,
+		RewardBalance: 210,
+		RewardXP:      45,
+	},
+	{
+		TemplateKey:   "mines_wins_2",
+		GroupName:     "Mines",
+		Title:         "Treasure Paths",
+		Description:   "Cash out 2 winning Mines rounds.",
+		GameScope:     missionScopeMines,
+		Metric:        missionMetricWins,
+		Target:        2,
+		RewardBalance: 260,
+		RewardXP:      55,
+	},
+	{
+		TemplateKey:   "mines_wager_220",
+		GroupName:     "Mines",
+		Title:         "Deep Dig",
+		Description:   "Wager 220 credits in Mines.",
+		GameScope:     missionScopeMines,
+		Metric:        missionMetricWager,
+		Target:        220,
+		RewardBalance: 240,
+		RewardXP:      50,
 	},
 }
 
@@ -578,6 +615,7 @@ func assignDailyMissionTemplates(sessionID string, cycleStart time.Time) []missi
 		pickMissionTemplate(coinFlipMissionTemplates, sessionID, cycleStart, "coinflip"),
 		pickMissionTemplate(blackjackMissionTemplates, sessionID, cycleStart, "blackjack"),
 		pickMissionTemplate(diceMissionTemplates, sessionID, cycleStart, "dice"),
+		pickMissionTemplate(minesMissionTemplates, sessionID, cycleStart, "mines"),
 	}
 }
 

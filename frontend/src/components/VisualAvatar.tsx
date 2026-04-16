@@ -16,13 +16,14 @@ type AvatarView =
     | "dice"
     | "blackjack"
     | "roulette"
+    | "mines"
     | "slots"
     | "crash"
     | "history"
     | "topup"
     | "profile"
     | "notifications";
-type AvatarGameKey = "coinflip" | "dice" | "blackjack" | "roulette" | "slots" | "crash";
+type AvatarGameKey = "coinflip" | "dice" | "blackjack" | "roulette" | "slots" | "crash" | "mines";
 
 type DialogueBeat = {
     emotion: AvatarEmotion;
@@ -64,6 +65,7 @@ const gameLabels: Record<AvatarGameKey, string> = {
     dice: "dice roll",
     roulette: "roulette spin",
     slots: "slot spin",
+    mines: "mines round",
 };
 
 const winDialogueSets: DialogueFactory[] = [
@@ -171,6 +173,9 @@ function normalizeGameKey(game: string): AvatarGameKey | null {
             return "slots";
         case "crash":
             return "crash";
+        case "mines":
+        case "minefield":
+            return "mines";
         default:
             return null;
     }
@@ -246,6 +251,13 @@ function getPostOutcomeRecommendation(event: BetRecord, gameKey: AvatarGameKey):
                 animation: "talk",
                 line: event.outcome === "win" ? "Next launch: profit first, hero speech later." : "Next launch: the curve was rude. We can be ruder with timing.",
                 durationMs: 6600,
+            };
+        case "mines":
+            return {
+                emotion: event.outcome === "win" ? "happy" : "surprised",
+                animation: "talk",
+                line: event.outcome === "win" ? "Next board: one clean reveal, then decide like a grown-up." : "Next board: cash out one tile earlier and blame my instincts.",
+                durationMs: 6800,
             };
     }
 }
@@ -538,6 +550,26 @@ function getScene({
                     { emotion: "happy", animation: "talk", line: "Crash is simple. Bet, lift off, leave before gravity notices.", durationMs: 5800 },
                     { emotion: "neutral", animation: "idle", line: "A clean 2x feels good. A greedy 20x tells stories in past tense.", durationMs: 6600 },
                     { emotion: "surprised", animation: "react", line: "Auto cashout is discipline with a timer.", durationMs: 5600 },
+                ],
+        };
+    }
+
+    if (view === "mines") {
+        const activeMines = state.mines?.status === "active" ? state.mines : null;
+        return {
+            signature: activeMines
+                ? `mines-live-${activeMines.id}-${activeMines.safeReveals}-${Math.floor(activeMines.currentMultiplier * 100)}`
+                : `mines-idle-${state.session.balance}-${claimableMissions}`,
+            beats: activeMines
+                ? [
+                    { emotion: "surprised", animation: "react", line: "One safe tile at a time. Greed is how the board says hello.", durationMs: 5400 },
+                    { emotion: "neutral", animation: "talk", line: `You are at ${activeMines.currentMultiplier.toFixed(2)}x. Cashout is legal and wise.`, durationMs: 6200 },
+                    { emotion: "angry", animation: "talk", line: "Do not click fast. Mines loves impatient people.", durationMs: 5800 },
+                ]
+                : [
+                    { emotion: "happy", animation: "talk", line: "Mines is patience with explosives. Strong theme.", durationMs: 5600 },
+                    { emotion: "neutral", animation: "idle", line: "Higher mine counts grow multipliers faster and trust issues even faster.", durationMs: 6600 },
+                    { emotion: "surprised", animation: "react", line: "If the board feels cursed, cash out one tile earlier next round.", durationMs: 6000 },
                 ],
         };
     }

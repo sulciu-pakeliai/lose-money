@@ -35,6 +35,11 @@ func TestMissionProgressAndStatus(t *testing.T) {
 		t.Fatalf("missionProgressIncrement(wager) = %d, want 75", got)
 	}
 
+	record = missionRecord{GameScope: missionScopeMines, Metric: missionMetricWins, Target: 2}
+	if got := missionProgressIncrement(record, missionProgressEvent{Game: missionScopeMines, Outcome: "win", Amount: 40}); got != 1 {
+		t.Fatalf("missionProgressIncrement(mines wins) = %d, want 1", got)
+	}
+
 	now := time.Now().UTC()
 	record = missionRecord{
 		ID:          "m1",

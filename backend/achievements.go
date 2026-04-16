@@ -15,6 +15,7 @@ const (
 	achievementMetricSingleBet         = "single_bet"
 	achievementMetricNaturalBlackjacks = "natural_blackjacks"
 	achievementMetricLuckySevens       = "lucky_sevens"
+	achievementMetricMinesPerfectClear = "mines_perfect_clear"
 )
 
 type achievementTemplate struct {
@@ -201,6 +202,32 @@ var achievementTemplates = []achievementTemplate{
 		Accent:      "gold",
 		IconLabel:   "7",
 		Metric:      achievementMetricLuckySevens,
+		Target:      1,
+	},
+	{
+		SortOrder:   10,
+		TemplateKey: "mine_sweeper",
+		GroupName:   "Mines",
+		Title:       "Mine Sweeper",
+		Description: "Finish 4 Mines rounds.",
+		GameScope:   missionScopeMines,
+		Rarity:      "common",
+		Accent:      "cyan",
+		IconLabel:   "MS",
+		Metric:      achievementMetricRounds,
+		Target:      4,
+	},
+	{
+		SortOrder:   11,
+		TemplateKey: "perfect_map",
+		GroupName:   "Mines",
+		Title:       "Perfect Map",
+		Description: "Clear every safe tile in one Mines round.",
+		GameScope:   missionScopeMines,
+		Rarity:      "epic",
+		Accent:      "gold",
+		IconLabel:   "PM",
+		Metric:      achievementMetricMinesPerfectClear,
 		Target:      1,
 	},
 }
@@ -410,6 +437,11 @@ func nextAchievementProgress(record achievementRecord, event achievementProgress
 		return minAchievementProgress(record.Progress+1, record.Target), true
 	case achievementMetricLuckySevens:
 		if event.Game != missionScopeDice || event.Status != "exact_seven" {
+			return record.Progress, false
+		}
+		return minAchievementProgress(record.Progress+1, record.Target), true
+	case achievementMetricMinesPerfectClear:
+		if event.Game != missionScopeMines || event.Status != "perfect_clear" {
 			return record.Progress, false
 		}
 		return minAchievementProgress(record.Progress+1, record.Target), true

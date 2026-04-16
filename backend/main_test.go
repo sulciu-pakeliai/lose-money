@@ -142,6 +142,9 @@ func TestLevelAndRewardHelpers(t *testing.T) {
 				if got := calculateXPReward("dice", 40, "win", "exact_seven"); got != 72 {
 					t.Fatalf("calculateXPReward(dice) = %d, want 72", got)
 				}
+				if got := calculateXPReward("mines", 60, "win", "perfect_clear"); got != 80 {
+					t.Fatalf("calculateXPReward(mines) = %d, want 80", got)
+				}
 			},
 		},
 	}
@@ -151,6 +154,35 @@ func TestLevelAndRewardHelpers(t *testing.T) {
 			t.Parallel()
 			tt.check(t)
 		})
+	}
+}
+
+func TestMinesMathHelpers(t *testing.T) {
+	t.Parallel()
+
+	if got := minesMultiplierCents(25, 5, 0); got != 100 {
+		t.Fatalf("minesMultiplierCents(25,5,0) = %d, want 100", got)
+	}
+
+	onePick := minesMultiplierCents(25, 5, 1)
+	twoPick := minesMultiplierCents(25, 5, 2)
+	if onePick <= 100 {
+		t.Fatalf("mines one reveal multiplier = %d, want > 100", onePick)
+	}
+	if twoPick <= onePick {
+		t.Fatalf("mines two reveal multiplier = %d, want > one reveal %d", twoPick, onePick)
+	}
+
+	mineSet := minesCellSet([]int{1, 3, 5})
+	if got := minesSafeRevealCount([]int{0, 1, 2, 3, 4}, mineSet); got != 3 {
+		t.Fatalf("minesSafeRevealCount(...) = %d, want 3", got)
+	}
+
+	if !containsCell([]int{2, 7, 9}, 7) {
+		t.Fatal("containsCell failed to find existing cell")
+	}
+	if containsCell([]int{2, 7, 9}, 6) {
+		t.Fatal("containsCell reported non-existing cell")
 	}
 }
 

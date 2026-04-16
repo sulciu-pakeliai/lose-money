@@ -1,4 +1,4 @@
-export type GameRuleKey = "coinflip" | "blackjack" | "dice" | "roulette" | "crash";
+export type GameRuleKey = "coinflip" | "blackjack" | "dice" | "roulette" | "crash" | "mines";
 
 export type GameRuleDefinition = {
     eyebrow: string;
@@ -135,5 +135,29 @@ export const GAME_RULES: Record<GameRuleKey, GameRuleDefinition> = {
             },
         ],
         footer: "Higher multipliers are possible, but waiting longer also leaves less room before the crash.",
+    },
+    mines: {
+        eyebrow: "Quick Guide",
+        title: "How Mines Works",
+        summary: "Pick safe tiles on a hidden board. Each safe reveal raises the multiplier. Cash out before you hit a mine.",
+        steps: [
+            {
+                title: "Start with a bet and mine count",
+                body: "Your wager is reserved when the round starts. More mines means faster multiplier growth and higher risk.",
+            },
+            {
+                title: "Reveal one tile at a time",
+                body: "Safe tiles keep the round alive and increase the cashout value. Revealed cells cannot be picked again.",
+            },
+            {
+                title: "Cash out whenever you want",
+                body: "Manual cashout settles the round at the current multiplier and records the result in history.",
+            },
+            {
+                title: "Mines end the round",
+                body: "Hitting a mine explodes the board and loses the reserved wager for that round.",
+            },
+        ],
+        footer: "A perfect clear of all safe tiles auto-settles as a win at the maximum round multiplier.",
     },
 };

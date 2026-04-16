@@ -60,6 +60,18 @@ func TestNextAchievementProgress(t *testing.T) {
 			want:    0,
 			changed: false,
 		},
+		{
+			name: "mines perfect clear tracks status",
+			record: achievementRecord{
+				GameScope: missionScopeMines,
+				Metric:    achievementMetricMinesPerfectClear,
+				Target:    1,
+				Progress:  0,
+			},
+			event:   achievementProgressEvent{Game: missionScopeMines, Status: "perfect_clear"},
+			want:    1,
+			changed: true,
+		},
 	}
 
 	for _, tt := range tests {

@@ -4,14 +4,17 @@ import "./index.css";
 import {
     deleteAccount,
     authLogout,
+    cashOutMinesRound,
     claimTopUp,
     claimMission,
     fetchState,
     hitBlackjack,
     markNotificationsRead,
+    revealMinesCell,
     cashOutCrashRound,
     submitDiceRoll,
     submitRoulette,
+    startMinesRound,
     startCrashRound,
     standBlackjack,
     startBlackjack,
@@ -27,6 +30,7 @@ import {
     type DiceBetType,
     type DiceRollResult,
     type MissionClaimResult,
+    type MinesActionResult,
     type RouletteBetType,
     type RouletteResult,
     type TopUpResult,
@@ -42,6 +46,7 @@ import { DiceGame } from "./components/DiceGame";
 import { BlackjackGame } from "./components/BlackjackGame";
 import { RouletteGame } from "./components/RouletteGame";
 import { CrashGame } from "./components/CrashGame";
+import { MinesGame } from "./components/MinesGame";
 import { BetHistory } from "./components/BetHistory";
 import { GameRulesModal } from "./components/GameRulesModal";
 import { TopUp } from "./components/TopUp";
@@ -51,7 +56,7 @@ import { NotificationsCenter } from "./components/NotificationsCenter";
 import { AchievementUnlockToasts } from "./components/AchievementUnlockToasts";
 import { VisualAvatar } from "./components/VisualAvatar";
 
-type View = "lobby" | "missions" | "achievements" | "coinflip" | "dice" | "blackjack" | "roulette" | "crash" | "history" | "topup" | "profile" | "notifications";
+type View = "lobby" | "missions" | "achievements" | "coinflip" | "dice" | "blackjack" | "roulette" | "crash" | "mines" | "history" | "topup" | "profile" | "notifications";
 
 export function App() {
     const [view, setView] = useState<View>("lobby");
@@ -88,7 +93,7 @@ export function App() {
     }, []);
 
     useEffect(() => {
-        if (view !== "coinflip" && view !== "blackjack" && view !== "dice" && view !== "crash") {
+        if (view !== "coinflip" && view !== "blackjack" && view !== "dice" && view !== "crash" && view !== "mines") {
             return;
         }
 
@@ -266,6 +271,23 @@ export function App() {
         );
     };
 
+    const applyMines = (next: MinesActionResult) => {
+        setState(current =>
+            current
+                ? {
+                    ...current,
+                    session: next.session,
+                    mines: next.mines,
+                    history: next.bet ? [next.bet, ...current.history].slice(0, 100) : current.history,
+                    topUp: next.topUp,
+                    missions: next.missions,
+                    achievements: next.achievements,
+                    notifications: next.notifications,
+                }
+                : current,
+        );
+    };
+
     const applyBlackjack = (next: BlackjackActionResult) => {
         setState(current =>
             current
@@ -331,6 +353,24 @@ export function App() {
     const handleCrashCashout = async () => {
         const next = await cashOutCrashRound();
         applyCrashCashout(next);
+        return next;
+    };
+
+    const handleMinesStart = async (amount: number, mineCount: number) => {
+        const next = await startMinesRound(amount, mineCount);
+        applyMines(next);
+        return next;
+    };
+
+    const handleMinesReveal = async (cell: number) => {
+        const next = await revealMinesCell(cell);
+        applyMines(next);
+        return next;
+    };
+
+    const handleMinesCashout = async () => {
+        const next = await cashOutMinesRound();
+        applyMines(next);
         return next;
     };
 
@@ -462,6 +502,7 @@ export function App() {
                             onSelectBlackjack={() => setView("blackjack")}
                             onSelectRoulette={() => setView("roulette")}
                             onSelectCrash={() => setView("crash")}
+                            onSelectMines={() => setView("mines")}
                             onSelectSlots={() => setView("topup")}
                             onOpenMissions={() => setView("missions")}
                             onOpenAchievements={() => setView("achievements")}
@@ -514,6 +555,17 @@ export function App() {
                             onStart={handleCrashStart}
                             onCashout={handleCrashCashout}
                             onOpenRules={() => openRules("crash")}
+                            onOutcomeReveal={setAvatarOutcome}
+                        />
+                    )}
+                    {!isLoading && state && view === "mines" && (
+                        <MinesGame
+                            balance={state.session.balance}
+                            game={state.mines ?? null}
+                            onStart={handleMinesStart}
+                            onReveal={handleMinesReveal}
+                            onCashout={handleMinesCashout}
+                            onOpenRules={() => openRules("mines")}
                             onOutcomeReveal={setAvatarOutcome}
                         />
                     )}

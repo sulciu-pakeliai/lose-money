@@ -228,7 +228,7 @@ export function CrashGame({ balance, game, onStart, onCashout, onOpenRules, onOu
 
     return (
         <section className="page-swap page-from-right w-full max-w-5xl overflow-hidden rounded-3xl border border-emerald-300/20 bg-[linear-gradient(145deg,rgba(3,7,18,0.96),rgba(6,78,59,0.46)_48%,rgba(8,13,28,0.98))] shadow-[0_40px_120px_rgba(2,6,23,0.48)]">
-            <div className="grid min-h-[640px] lg:grid-cols-[17rem_minmax(0,1fr)]">
+            <div className="grid min-h-160 lg:grid-cols-[17rem_minmax(0,1fr)]">
                 <aside className="border-b border-white/10 bg-black/24 p-4 lg:border-b-0 lg:border-r">
                     <div className="grid grid-cols-2 rounded-xl bg-slate-950/70 p-1">
                         {(["manual", "auto"] as const).map(nextMode => (

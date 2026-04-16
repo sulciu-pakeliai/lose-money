@@ -87,6 +87,7 @@ type stateResponse struct {
 	Notifications []notificationDTO   `json:"notifications"`
 	Blackjack     *blackjackGameState `json:"blackjack,omitempty"`
 	Crash         *crashGameState     `json:"crash,omitempty"`
+	Mines         *minesGameState     `json:"mines,omitempty"`
 }
 
 type coinFlipRequest struct {
@@ -168,6 +169,9 @@ func main() {
 	mux.HandleFunc("POST /api/slots/spin", app.handleSlotSpin)
 	mux.HandleFunc("POST /api/crash/start", app.handleCrashStart)
 	mux.HandleFunc("POST /api/crash/cashout", app.handleCrashCashout)
+	mux.HandleFunc("POST /api/mines/start", app.handleMinesStart)
+	mux.HandleFunc("POST /api/mines/reveal", app.handleMinesReveal)
+	mux.HandleFunc("POST /api/mines/cashout", app.handleMinesCashout)
 
 	server := &http.Server{
 		Addr:              ":" + port,
@@ -351,6 +355,26 @@ CREATE UNIQUE INDEX IF NOT EXISTS crash_active_session_idx
     ON crash_games(session_id)
     WHERE status = 'active';
 
+CREATE TABLE IF NOT EXISTS mines_games (
+	id TEXT PRIMARY KEY,
+	session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+	bet_amount BIGINT NOT NULL,
+	grid_size INTEGER NOT NULL,
+	mine_count INTEGER NOT NULL,
+	mine_positions JSONB NOT NULL,
+	revealed_cells JSONB NOT NULL,
+	cashout_multiplier_cents BIGINT,
+	payout BIGINT,
+	status TEXT NOT NULL,
+	started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+	updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+	completed_at TIMESTAMPTZ
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS mines_active_session_idx
+	ON mines_games(session_id)
+	WHERE status = 'active';
+
 ALTER TABLE sessions ADD COLUMN IF NOT EXISTS user_id TEXT REFERENCES users(id);
 CREATE INDEX IF NOT EXISTS sessions_user_idx ON sessions(user_id);
 `
@@ -388,6 +412,12 @@ func (a *application) handleState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	mines, err := a.loadActiveMines(r.Context(), session.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load mines state")
+		return
+	}
+
 	missions, err := a.loadDailyMissions(r.Context(), session.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to load missions")
@@ -415,6 +445,7 @@ func (a *application) handleState(w http.ResponseWriter, r *http.Request) {
 		Notifications: notifications,
 		Blackjack:     blackjack,
 		Crash:         crash,
+		Mines:         mines,
 	})
 }
 
@@ -920,6 +951,13 @@ func calculateXPReward(game string, amount int64, outcome string, status string)
 		statusBonus = 18
 	} else if game == "crash" && status == "cashout" {
 		statusBonus = 16
+	} else if game == "mines" {
+		switch status {
+		case "perfect_clear":
+			statusBonus = 24
+		case "cashout":
+			statusBonus = 12
+		}
 	}
 
 	return base + volumeBonus + outcomeBonus + statusBonus
