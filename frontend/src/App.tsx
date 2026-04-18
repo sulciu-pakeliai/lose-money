@@ -58,8 +58,9 @@ import { Profile } from "./components/Profile";
 import { NotificationsCenter } from "./components/NotificationsCenter";
 import { AchievementUnlockToasts } from "./components/AchievementUnlockToasts";
 import { VisualAvatar } from "./components/VisualAvatar";
+import { SettingsPanel } from "./components/SettingsPanel";
 
-type View = "lobby" | "missions" | "achievements" | "coinflip" | "dice" | "blackjack" | "slots" | "roulette" | "crash" | "mines" | "history" | "topup" | "profile" | "notifications";
+type View = "lobby" | "missions" | "achievements" | "coinflip" | "dice" | "blackjack" | "slots" | "roulette" | "crash" | "mines" | "history" | "topup" | "profile" | "notifications" | "settings";
 
 export function App() {
     const [view, setView] = useState<View>("lobby");
@@ -496,6 +497,8 @@ export function App() {
                     unlockedAchievementCount={unlockedAchievementCount}
                     isProfile={view === "profile"}
                     onProfileClick={() => setView("profile")}
+                    isSettings={view === "settings"}
+                    onSettingsClick={() => setView("settings")}
                 />
 
                 <main className="flex flex-1 items-center justify-center py-12">
@@ -608,6 +611,9 @@ export function App() {
                     )}
                     {!isLoading && state && view === "profile" && (
                         <Profile session={state.session} onDeleteAccount={handleDeleteAccount} />
+                    )}
+                    {!isLoading && state && view === "settings" && (
+                        <SettingsPanel isLoggedIn={!!state.session.userId} />
                     )}
                 </main>
             </div>

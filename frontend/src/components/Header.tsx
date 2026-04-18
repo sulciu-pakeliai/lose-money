@@ -13,6 +13,7 @@ type HeaderProps = {
     unreadNotificationCount: number;
     unlockedAchievementCount: number;
     isProfile: boolean;
+    isSettings: boolean;
     onLobbyClick: () => void;
     onMissionsClick: () => void;
     onAchievementsClick: () => void;
@@ -22,6 +23,7 @@ type HeaderProps = {
     onSignInClick: () => void;
     onLogoutClick: () => void;
     onProfileClick: () => void;
+    onSettingsClick: () => void;
 };
 
 const formatNumber = (value: number) =>
@@ -39,6 +41,7 @@ export function Header({
     unreadNotificationCount,
     unlockedAchievementCount,
     isProfile,
+    isSettings,
     onLobbyClick,
     onMissionsClick,
     onAchievementsClick,
@@ -48,6 +51,7 @@ export function Header({
     onSignInClick,
     onLogoutClick,
     onProfileClick,
+    onSettingsClick,
 }: HeaderProps) {
     const balance = session?.balance ?? 0;
     const level = session?.level ?? 1;
@@ -176,6 +180,18 @@ export function Header({
                                     {unreadNotificationCount}
                                 </span>
                             )}
+                        </button>
+
+                        <button
+                            onClick={onSettingsClick}
+                            aria-current={isSettings ? "page" : undefined}
+                            className={`shrink-0 rounded-full px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] transition duration-200 hover:bg-white/20 ${isSettings
+                                ? "bg-white/15 text-white shadow-[0_0_30px_rgba(56,189,248,0.25)]"
+                                : "text-slate-200/70 hover:text-white"
+                            }`}
+                            type="button"
+                        >
+                            Settings
                         </button>
                     </nav>
                 </div>

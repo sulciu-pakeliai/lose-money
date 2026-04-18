@@ -70,6 +70,21 @@ func (a *application) handleRoulette(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var excluded bool
+	excluded, err = a.isSessionExcluded(r.Context(), session.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to check exclusion")
+		return
+	}
+	if excluded {
+		writeError(w, http.StatusForbidden, "self-exclusion is active — bets are not allowed")
+		return
+	}
+	if limit := a.sessionBetLimit(r.Context(), session.ID); limit != nil && req.Amount > *limit {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("bet exceeds your session limit of %d", *limit))
+		return
+	}
+
 	req.BetType = normalizeRouletteBetType(req.BetType)
 	req.Choice = normalizeRouletteChoice(req.Choice)
 

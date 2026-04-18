@@ -172,6 +172,11 @@ func main() {
 	mux.HandleFunc("POST /api/mines/start", app.handleMinesStart)
 	mux.HandleFunc("POST /api/mines/reveal", app.handleMinesReveal)
 	mux.HandleFunc("POST /api/mines/cashout", app.handleMinesCashout)
+	mux.HandleFunc("GET /api/settings", app.handleGetSettings)
+	mux.HandleFunc("POST /api/settings/self-exclusion", app.handleSetSelfExclusion)
+	mux.HandleFunc("DELETE /api/settings/self-exclusion", app.handleRemoveSelfExclusion)
+	mux.HandleFunc("POST /api/settings/bet-limit", app.handleSetBetLimit)
+	mux.HandleFunc("DELETE /api/settings/bet-limit", app.handleRemoveBetLimit)
 
 	server := &http.Server{
 		Addr:              ":" + port,
@@ -371,6 +376,13 @@ CREATE TABLE IF NOT EXISTS mines_games (
 	completed_at TIMESTAMPTZ
 );
 
+CREATE TABLE IF NOT EXISTS session_settings (
+    session_id TEXT PRIMARY KEY REFERENCES sessions(id) ON DELETE CASCADE,
+    self_excluded_until TIMESTAMPTZ,
+    max_bet_amount BIGINT,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE UNIQUE INDEX IF NOT EXISTS mines_active_session_idx
 	ON mines_games(session_id)
 	WHERE status = 'active';
@@ -451,6 +463,7 @@ func (a *application) handleState(w http.ResponseWriter, r *http.Request) {
 
 func (a *application) handleCoinFlip(w http.ResponseWriter, r *http.Request) {
 	session, err := a.ensureSession(w, r)
+
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to load session")
 		return
@@ -459,6 +472,21 @@ func (a *application) handleCoinFlip(w http.ResponseWriter, r *http.Request) {
 	var req coinFlipRequest
 	if err := decodeJSON(r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	excluded, err := a.isSessionExcluded(r.Context(), session.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to check exclusion")
+		return
+	}
+	if excluded {
+		writeError(w, http.StatusForbidden, "self-exclusion is active — bets are not allowed")
+		return
+	}
+
+	if limit := a.sessionBetLimit(r.Context(), session.ID); limit != nil && req.Amount > *limit {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("bet exceeds your session limit of %d", *limit))
 		return
 	}
 

@@ -275,6 +275,11 @@ export type MinesActionResult = {
     notifications: AppNotification[];
 };
 
+export type SettingsDTO = {
+    selfExclusion?: { excludedUntil: string };
+    betLimit?: { maxBetAmount: number };
+};
+
 type APIError = {
     error?: string;
 };
@@ -461,4 +466,32 @@ export async function cashOutMinesRound(): Promise<MinesActionResult> {
     return apiFetch<MinesActionResult>("/api/mines/cashout", {
         method: "POST",
     });
+}
+
+export async function fetchSettings(): Promise<SettingsDTO> {
+    return apiFetch<SettingsDTO>("/api/settings");
+}
+
+export async function setSelfExclusion(durationHours: number): Promise<SettingsDTO> {
+    return apiFetch<SettingsDTO>("/api/settings/self-exclusion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ durationHours }),
+    });
+}
+
+export async function removeSelfExclusion(): Promise<SettingsDTO> {
+    return apiFetch<SettingsDTO>("/api/settings/self-exclusion", { method: "DELETE" });
+}
+
+export async function setBetLimit(maxBetAmount: number): Promise<SettingsDTO> {
+    return apiFetch<SettingsDTO>("/api/settings/bet-limit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ maxBetAmount }),
+    });
+}
+
+export async function removeBetLimit(): Promise<SettingsDTO> {
+    return apiFetch<SettingsDTO>("/api/settings/bet-limit", { method: "DELETE" });
 }

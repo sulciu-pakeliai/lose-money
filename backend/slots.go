@@ -97,6 +97,21 @@ func (a *application) handleSlotSpin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	excluded, err := a.isSessionExcluded(r.Context(), session.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to check exclusion")
+		return
+	}
+	if excluded {
+		writeError(w, http.StatusForbidden, "self-exclusion is active — bets are not allowed")
+		return
+	}
+
+	if limit := a.sessionBetLimit(r.Context(), session.ID); limit != nil && req.Amount > *limit {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("bet exceeds your session limit of %d", *limit))
+		return
+	}
+
 	switch {
 	case req.Amount < 1:
 		writeError(w, http.StatusBadRequest, "bet amount must be at least 1")
