@@ -19,6 +19,7 @@ import {
     standBlackjack,
     startBlackjack,
     submitCoinFlip,
+    submitSlotSpin,
     type Achievement,
     type AppState,
     type BetRecord,
@@ -34,6 +35,7 @@ import {
     type RouletteBetType,
     type RouletteResult,
     type TopUpResult,
+    type SlotSpinResult,
 } from "./lib/session";
 import { AuthModal } from "./components/AuthModal";
 import type { GameRuleKey } from "./lib/gameRules";
@@ -44,6 +46,7 @@ import { AchievementsBoard } from "./components/AchievementsBoard";
 import { CoinFlipGame } from "./components/CoinFlipGame";
 import { DiceGame } from "./components/DiceGame";
 import { BlackjackGame } from "./components/BlackjackGame";
+import { SlotGame } from "./components/SlotGame";
 import { RouletteGame } from "./components/RouletteGame";
 import { CrashGame } from "./components/CrashGame";
 import { MinesGame } from "./components/MinesGame";
@@ -56,7 +59,7 @@ import { NotificationsCenter } from "./components/NotificationsCenter";
 import { AchievementUnlockToasts } from "./components/AchievementUnlockToasts";
 import { VisualAvatar } from "./components/VisualAvatar";
 
-type View = "lobby" | "missions" | "achievements" | "coinflip" | "dice" | "blackjack" | "roulette" | "crash" | "mines" | "history" | "topup" | "profile" | "notifications";
+type View = "lobby" | "missions" | "achievements" | "coinflip" | "dice" | "blackjack" | "slots" | "roulette" | "crash" | "mines" | "history" | "topup" | "profile" | "notifications";
 
 export function App() {
     const [view, setView] = useState<View>("lobby");
@@ -305,6 +308,21 @@ export function App() {
         );
     };
 
+    const applySlotSpin = (next: SlotSpinResult) => {
+        setState(current =>
+            current ? {
+                ...current,
+                session: next.session,
+                history: [next.bet, ...current.history].slice(0, 100),
+                topUp: next.topUp,
+                missions: next.missions,
+                achievements: next.achievements,
+                notifications: next.notifications,
+            }
+            : current,
+        );
+    };
+
     const applyMissionClaim = (next: MissionClaimResult) => {
         setState(current =>
             current
@@ -389,6 +407,12 @@ export function App() {
     const handleBlackjackStand = async () => {
         const next = await standBlackjack();
         applyBlackjack(next);
+        return next;
+    };
+
+    const handleSlotSpin = async (amount: number) => {
+        const next = await submitSlotSpin(amount);
+        applySlotSpin(next);
         return next;
     };
 
@@ -503,7 +527,8 @@ export function App() {
                             onSelectRoulette={() => setView("roulette")}
                             onSelectCrash={() => setView("crash")}
                             onSelectMines={() => setView("mines")}
-                            onSelectSlots={() => setView("topup")}
+                            onSelectSlots={() => setView("slots")}
+                            onSelectTopUp={() => setView("topup")}
                             onOpenMissions={() => setView("missions")}
                             onOpenAchievements={() => setView("achievements")}
                             missions={state.missions}
@@ -566,6 +591,13 @@ export function App() {
                             onReveal={handleMinesReveal}
                             onCashout={handleMinesCashout}
                             onOpenRules={() => openRules("mines")}
+                            onOutcomeReveal={setAvatarOutcome}
+                        />
+                    )}
+                    {!isLoading && state && view === "slots" && (
+                        <SlotGame 
+                            balance={state.session.balance} 
+                            onSpin={handleSlotSpin} 
                             onOutcomeReveal={setAvatarOutcome}
                         />
                     )}
