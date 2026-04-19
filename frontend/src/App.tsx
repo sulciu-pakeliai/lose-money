@@ -471,7 +471,7 @@ export function App() {
 
     return (
         <div className="min-h-screen">
-            <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-6 pb-14 pt-10">
+            <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-6 pb-14 pt-10">
                 <Header
                     session={state?.session ?? null}
                     showAuthActions={!isLoading}

@@ -24,36 +24,85 @@ function formatMultiplier(value: number) {
     return `${value.toFixed(2)}x`;
 }
 
+function getRoundTone(game: MinesGameState | null) {
+    if (!game) {
+        return "idle";
+    }
+    if (game.status === "exploded") {
+        return "lost";
+    }
+    if (game.status === "cashed_out") {
+        return "won";
+    }
+    return "active";
+}
+
+function getRoundSummary(game: MinesGameState | null) {
+    const tone = getRoundTone(game);
+    if (tone === "lost") {
+        return {
+            title: "Mine triggered",
+            detail: "Round lost. The bomb tile is marked and the minefield is revealed.",
+        };
+    }
+    if (tone === "won") {
+        return {
+            title: "Cashout locked",
+            detail: "Round won. Your safe diamonds and the hidden bombs are now visible.",
+        };
+    }
+    if (tone === "active") {
+        return {
+            title: "Round live",
+            detail: "Pick another tile or cash out before a mine ends the run.",
+        };
+    }
+    return {
+        title: "Ready",
+        detail: "Start a round to open the board.",
+    };
+}
+
 function getCellTone(params: {
     index: number;
-    activeGame: MinesGameState | null;
+    game: MinesGameState | null;
     selectedCell: number | null;
     pendingCell: number | null;
 }) {
-    const { index, activeGame, selectedCell, pendingCell } = params;
+    const { index, game, selectedCell, pendingCell } = params;
 
-    if (!activeGame) {
+    if (!game) {
         return "border-white/10 bg-white/5 text-slate-400";
     }
 
-    const isMine = Boolean(activeGame.minePositions?.includes(index));
-    const isRevealed = activeGame.revealedCells.includes(index);
+    const isMine = Boolean(game.minePositions?.includes(index));
+    const isRevealed = game.revealedCells.includes(index);
     const isPending = pendingCell === index;
+    const isRoundOver = game.status !== "active";
+    const isExplodedMine = game.status === "exploded" && isMine && isRevealed;
 
     if (isPending) {
         return "border-cyan-300/60 bg-cyan-300/20 text-cyan-100";
     }
 
-    if (isRevealed && isMine) {
-        return "border-rose-400/70 bg-rose-400/25 text-rose-100";
+    if (isExplodedMine) {
+        return "mines-cell-hit border-rose-300/80 bg-rose-500/25 text-rose-100";
+    }
+
+    if (isMine && (isRoundOver || isRevealed)) {
+        return "border-rose-400/70 bg-rose-400/18 text-rose-100";
     }
 
     if (isRevealed && !isMine) {
-        return "border-emerald-300/60 bg-emerald-300/20 text-emerald-100";
+        return "mines-cell-safe border-emerald-300/70 bg-emerald-300/20 text-emerald-100";
     }
 
-    if (selectedCell === index) {
+    if (game.status === "active" && selectedCell === index) {
         return "border-cyan-300/60 bg-cyan-300/16 text-cyan-100";
+    }
+
+    if (isRoundOver) {
+        return "border-white/10 bg-white/5 text-slate-400/60";
     }
 
     return "border-white/10 bg-white/5 text-slate-300 hover:border-white/20";
@@ -79,9 +128,13 @@ export function MinesGame({ balance, game, onStart, onReveal, onCashout, onOpenR
 
     const currentMultiplier = activeGame?.currentMultiplier ?? game?.currentMultiplier ?? 1;
     const potentialPayout = activeGame?.potentialPayout ?? Math.floor(bet * currentMultiplier);
+    const roundTone = getRoundTone(game);
+    const roundSummary = getRoundSummary(game);
 
-    const boardSize = activeGame?.gridSize ?? 25;
+    const boardSize = game?.gridSize ?? 25;
     const cells = useMemo(() => Array.from({ length: boardSize }, (_, idx) => idx), [boardSize]);
+    const mineCells = useMemo(() => new Set(game?.minePositions ?? []), [game?.id, game?.minePositions]);
+    const revealedCells = useMemo(() => new Set(game?.revealedCells ?? []), [game?.id, game?.revealedCells]);
 
     const startRound = async () => {
         if (!canStart) {
@@ -145,7 +198,7 @@ export function MinesGame({ balance, game, onStart, onReveal, onCashout, onOpenR
     };
 
     return (
-        <section className="page-swap page-from-right w-full max-w-5xl overflow-hidden rounded-3xl border border-cyan-300/20 bg-[linear-gradient(145deg,rgba(3,7,18,0.97),rgba(8,47,73,0.5)_48%,rgba(8,13,28,0.98))] p-6 shadow-[0_40px_120px_rgba(2,6,23,0.5)]">
+        <section className="game-shell game-shell-mines page-swap page-from-right w-full max-w-5xl overflow-hidden rounded-3xl border border-cyan-300/20 bg-[linear-gradient(145deg,rgba(3,7,18,0.97),rgba(8,47,73,0.5)_48%,rgba(8,13,28,0.98))] p-6 shadow-[0_40px_120px_rgba(2,6,23,0.5)]">
             <div className="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
                 <aside className="rounded-3xl border border-white/10 bg-black/25 p-4">
                     <div>
@@ -280,7 +333,11 @@ export function MinesGame({ balance, game, onStart, onReveal, onCashout, onOpenR
                     </button>
                 </aside>
 
-                <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
+                <div
+                    className={`mines-board-panel rounded-3xl border border-white/10 bg-black/20 p-4 sm:p-5 ${
+                        roundTone === "lost" ? "mines-board-lost" : roundTone === "won" ? "mines-board-won" : ""
+                    }`}
+                >
                     <div className="grid gap-3 sm:grid-cols-3">
                         <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                             <p className="text-xs uppercase tracking-[0.25em] text-slate-300/70">Safe Picks</p>
@@ -296,16 +353,41 @@ export function MinesGame({ balance, game, onStart, onReveal, onCashout, onOpenR
                         </div>
                     </div>
 
-                    <div className="mt-4 rounded-2xl border border-white/10 bg-slate-950/50 p-4 text-sm text-slate-200/80">
-                        {game?.message ?? "Start a round to open the board."}
+                    <div
+                        className={`mines-status-banner mt-4 rounded-2xl border p-4 ${
+                            roundTone === "lost"
+                                ? "border-rose-400/50 bg-rose-500/12"
+                                : roundTone === "won"
+                                    ? "border-emerald-300/50 bg-emerald-300/14"
+                                    : "border-white/10 bg-slate-950/50"
+                        }`}
+                    >
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <p className="text-[10px] uppercase tracking-[0.28em] text-slate-300/70">
+                                    {roundSummary.title}
+                                </p>
+                                <p className="mt-1 text-sm text-slate-200/80">
+                                    {roundSummary.detail}
+                                </p>
+                            </div>
+                            {game && game.status !== "active" && (
+                                <div className="font-display text-3xl text-white">
+                                    {game.status === "exploded" ? "Lost" : `+₵ ${formatCredits(game.potentialPayout)}`}
+                                </div>
+                            )}
+                        </div>
                     </div>
 
-                    <div className="mt-5 grid grid-cols-5 gap-2 sm:gap-3">
+                    <div className="mines-grid mt-5 grid grid-cols-5 gap-1.5 sm:gap-3">
                         {cells.map(index => {
                             const isLocked = !activeGame || isRequesting || activeGame.revealedCells.includes(index);
-                            const isMine = Boolean(game?.minePositions?.includes(index));
-                            const isRevealed = Boolean(game?.revealedCells.includes(index));
-                            const label = isRevealed ? (isMine ? "💣" : "💎") : index + 1;
+                            const isMine = mineCells.has(index);
+                            const isRevealed = revealedCells.has(index);
+                            const isRoundOver = Boolean(game && game.status !== "active");
+                            const showMine = isMine && (isRoundOver || isRevealed);
+                            const showGem = isRevealed && !isMine;
+                            const isExplodedMine = Boolean(game?.status === "exploded" && isMine && isRevealed);
                             return (
                                 <button
                                     key={index}
@@ -314,15 +396,32 @@ export function MinesGame({ balance, game, onStart, onReveal, onCashout, onOpenR
                                     onMouseLeave={() => setSelectedCell(current => (current === index ? null : current))}
                                     onClick={() => void revealCell(index)}
                                     disabled={isLocked}
-                                    className={`aspect-square rounded-xl border text-xs font-semibold transition ${getCellTone({
+                                    className={`mines-cell aspect-square rounded-lg border text-xs font-semibold transition sm:rounded-xl ${getCellTone({
                                         index,
-                                        activeGame,
+                                        game,
                                         selectedCell,
                                         pendingCell,
                                     })} disabled:cursor-not-allowed disabled:opacity-90`}
                                     type="button"
+                                    aria-label={
+                                        showMine
+                                            ? isExplodedMine
+                                                ? `Tile ${index + 1}: exploded mine`
+                                                : `Tile ${index + 1}: mine`
+                                            : showGem
+                                                ? `Tile ${index + 1}: safe diamond`
+                                                : `Tile ${index + 1}`
+                                    }
                                 >
-                                    {label}
+                                    {showMine ? (
+                                        <span className={`mines-symbol mines-symbol-bomb ${isExplodedMine ? "mines-symbol-hit" : ""}`}>
+                                            💣
+                                        </span>
+                                    ) : showGem ? (
+                                        <span className="mines-symbol mines-symbol-gem">💎</span>
+                                    ) : (
+                                        <span className="mines-cell-number">{index + 1}</span>
+                                    )}
                                 </button>
                             );
                         })}

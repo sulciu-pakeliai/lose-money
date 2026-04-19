@@ -7,6 +7,7 @@ const lastActivityStorageKey = "lm_activity_timer_last_activity_at_v1";
 
 type SessionTimerProps = {
     label?: string;
+    containerClassName?: string;
     valueClassName?: string;
     labelClassName?: string;
 };
@@ -24,14 +25,11 @@ function formatElapsed(elapsedMs: number): string {
 
 function parseStoredNumber(value: string | null): number | null {
     if (!value) {
-        console.log('[SessionTimer] parseStoredNumber called with null/falsy');
         return null;
     }
 
     const parsed = Number(value);
-    const result = Number.isFinite(parsed) ? parsed : null;
-    console.log('[SessionTimer] parseStoredNumber:', { input: value, output: result });
-    return result;
+    return Number.isFinite(parsed) ? parsed : null;
 }
 
 function clearStoredTimer() {
@@ -42,8 +40,6 @@ function clearStoredTimer() {
 function readTimerSnapshot(nowMs: number): { startedAtMs: number | null; lastActivityAtMs: number | null; elapsedMs: number } {
     const startedAtMs = parseStoredNumber(window.localStorage.getItem(startedAtStorageKey));
     const lastActivityAtMs = parseStoredNumber(window.localStorage.getItem(lastActivityStorageKey));
-
-    console.log('[SessionTimer] readTimerSnapshot:', { startedAtMs, lastActivityAtMs, nowMs });
 
     if (startedAtMs === null || lastActivityAtMs === null) {
         return { startedAtMs: null, lastActivityAtMs: null, elapsedMs: 0 };
@@ -69,11 +65,11 @@ function readTimerSnapshot(nowMs: number): { startedAtMs: number | null; lastAct
 function persistTimer(startedAtMs: number, lastActivityAtMs: number) {
     window.localStorage.setItem(startedAtStorageKey, String(startedAtMs));
     window.localStorage.setItem(lastActivityStorageKey, String(lastActivityAtMs));
-    console.log('[SessionTimer] persistTimer:', { startedAtMs, lastActivityAtMs });
 }
 
 export function SessionTimer({
     label = "Session time",
+    containerClassName,
     valueClassName,
     labelClassName,
 }: SessionTimerProps) {
@@ -85,7 +81,6 @@ export function SessionTimer({
             const snapshot = readTimerSnapshot(Date.now());
             lastRecordedActivityAtRef.current = snapshot.lastActivityAtMs;
             setElapsed(formatElapsed(snapshot.elapsedMs));
-            console.log('[SessionTimer] syncFromStorage:', { snapshot, elapsed: formatElapsed(snapshot.elapsedMs) });
         };
 
         const recordActivity = () => {
@@ -105,7 +100,6 @@ export function SessionTimer({
             persistTimer(startedAtMs, nowMs);
             lastRecordedActivityAtRef.current = nowMs;
             setElapsed(formatElapsed(nowMs - startedAtMs));
-            console.log('[SessionTimer] recordActivity fired, persisted:', startedAtMs, nowMs);
         };
 
         const handleStorage = (event: StorageEvent) => {
@@ -144,7 +138,7 @@ export function SessionTimer({
     }, []);
 
     return (
-        <div>
+        <div className={containerClassName}>
             <p className={labelClassName ?? "text-[10px] uppercase tracking-[0.24em] text-slate-400/70"}>{label}</p>
             <p className={valueClassName ?? "mt-1 font-display text-2xl text-white"}>{elapsed}</p>
         </div>

@@ -89,150 +89,151 @@ export function Lobby({
             return (right.progress / right.target) - (left.progress / left.target);
         })
         .slice(0, 3);
+    const previewMissions = missions.slice(0, 3);
 
     return (
-        <section className="page-swap page-from-left w-full max-w-4xl rounded-3xl border border-white/10 bg-white/5 p-6">
-            <div>
-                <p className="text-xs uppercase tracking-[0.3em] text-slate-300/70">Games</p>
-                <h2 className="mt-2 font-display text-3xl text-white">Lobby</h2>
-            </div>
-            <div className="mt-8 grid gap-6 md:grid-cols-2">
-                {gameTiles.map(tile => (
-                    <button
-                        key={tile.title}
-                        onClick={tile.onSelect === "coinflip" ? onSelectCoinFlip : 
-                            tile.onSelect === "dice" ? onSelectDice : 
-                            tile.onSelect === "blackjack" ? onSelectBlackjack : 
-                            tile.onSelect === "roulette" ? onSelectRoulette : 
-                            tile.onSelect === "crash" ? onSelectCrash :
-                            tile.onSelect === "mines" ? onSelectMines :
-                            onSelectSlots}
-                        className="group relative overflow-hidden rounded-3xl border border-white/10 bg-linear-to-br from-slate-950/70 via-slate-900/70 to-slate-950/80 p-6 text-left transition hover:-translate-y-1 hover:border-white/20 hover:shadow-[0_25px_60px_rgba(14,116,144,0.35)]"
-                        type="button"
-                    >
-                        <div className="absolute inset-0 opacity-0 transition group-hover:opacity-100">
-                            <div className="absolute -left-10 top-1/2 h-40 w-40 -translate-y-1/2 rounded-full bg-cyan-500/20 blur-3xl" />
+        <section className="page-swap page-from-left w-full max-w-6xl">
+            <div className="grid gap-5 xl:grid-cols-[15rem_minmax(0,1fr)_15rem] xl:items-start">
+                <aside className="lobby-progress-card lobby-progress-missions order-2 rounded-3xl border border-amber-300/20 bg-[linear-gradient(135deg,rgba(120,53,15,0.28),rgba(15,23,42,0.82))] p-4 xl:order-1">
+                    <div className="flex items-center justify-between gap-3">
+                        <div>
+                            <p className="text-[10px] uppercase tracking-[0.28em] text-amber-100/70">Missions</p>
+                            <h3 className="mt-1 font-display text-2xl text-white">Today</h3>
                         </div>
-                        <div className="relative">
-                            <div className="flex items-center gap-4">
-                                <div
-                                    className={`grid h-16 w-16 place-items-center rounded-2xl bg-linear-to-br ${tile.accent} text-2xl shadow-[0_12px_30px_rgba(248,113,113,0.35)]`}
-                                >
-                                    {tile.icon}
-                                </div>
-                                <div>
-                                    <p className="text-xs uppercase tracking-[0.25em] text-slate-400">{tile.subtitle}</p>
-                                    <h3 className="mt-2 font-display text-3xl text-white">{tile.title}</h3>
-                                </div>
-                            </div>
-                        </div>
-                    </button>
-                ))}
-            </div>
-            <div className="mt-10">
-                <p className="text-xs uppercase tracking-[0.3em] text-slate-300/70">Progress</p>
-                <div className="mt-4 grid gap-6 xl:grid-cols-2">
-                    <div className="rounded-3xl border border-amber-300/20 bg-[linear-gradient(135deg,rgba(120,53,15,0.28),rgba(15,23,42,0.82))] p-5">
-                        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                            <div>
-                                <p className="text-xs uppercase tracking-[0.3em] text-amber-100/70">Missions</p>
-                                <h3 className="mt-2 font-display text-3xl text-white">Daily missions</h3>
-                            </div>
-                            <button
-                                onClick={onOpenMissions}
-                                className="arcade-button rounded-full border border-amber-300/40 bg-amber-300/12 px-5 py-3 text-xs font-semibold uppercase tracking-[0.22em] text-amber-100 transition hover:bg-amber-300/18"
-                                type="button"
-                            >
-                                Open missions
-                            </button>
-                        </div>
-
-                        <div className="mt-5 grid gap-3">
-                            {missions.map(mission => (
-                                <button
-                                    key={mission.id}
-                                    onClick={onOpenMissions}
-                                    className="rounded-2xl border border-white/10 bg-black/20 p-4 text-left transition hover:border-white/20 hover:bg-black/25"
-                                    type="button"
-                                >
-                                    <p className="text-[10px] uppercase tracking-[0.28em] text-amber-100/60">{mission.groupName}</p>
-                                    <h4 className="mt-2 font-display text-2xl text-white">{mission.title}</h4>
-                                    <p className="mt-2 text-sm text-slate-200/75">{mission.description}</p>
-                                    <div className="mt-4 flex items-center justify-between text-[11px] uppercase tracking-[0.22em] text-slate-300/75">
-                                        <span>
-                                            {mission.progress}/{mission.target}
-                                        </span>
-                                        <span>{mission.status === "claimable" ? "Ready" : mission.status === "claimed" ? "Claimed" : "Live"}</span>
-                                    </div>
-                                    <div className="mt-3 h-2 rounded-full bg-white/10">
-                                        <div
-                                            className="level-panel-fill h-full rounded-full"
-                                            style={{ width: `${Math.min(100, (mission.progress / mission.target) * 100)}%` }}
-                                        />
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
-
-                        <div className="mt-4 text-xs uppercase tracking-[0.24em] text-amber-100/70">
-                            {claimableCount > 0 ? `${claimableCount} mission reward ready` : "No rewards ready"}
-                        </div>
+                        <button
+                            onClick={onOpenMissions}
+                            className="arcade-button rounded-full border border-amber-300/40 bg-amber-300/12 px-3 py-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-amber-100 transition hover:bg-amber-300/18"
+                            type="button"
+                        >
+                            Open
+                        </button>
                     </div>
 
-                    <div className="rounded-3xl border border-cyan-300/20 bg-[linear-gradient(135deg,rgba(8,47,73,0.34),rgba(15,23,42,0.84))] p-5">
-                        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                            <div>
-                                <p className="text-xs uppercase tracking-[0.3em] text-cyan-100/70">Badges</p>
-                                <h3 className="mt-2 font-display text-3xl text-white">Achievements</h3>
-                            </div>
+                    <div className="mt-4 grid gap-3">
+                        {previewMissions.map(mission => (
                             <button
-                                onClick={onOpenAchievements}
-                                className="arcade-button rounded-full border border-cyan-300/35 bg-cyan-300/10 px-5 py-3 text-xs font-semibold uppercase tracking-[0.22em] text-cyan-100 transition hover:bg-cyan-300/16"
+                                key={mission.id}
+                                onClick={onOpenMissions}
+                                className="rounded-2xl border border-white/10 bg-black/20 p-3 text-left transition hover:border-white/20 hover:bg-black/25"
                                 type="button"
                             >
-                                Open achievements
+                                <div className="flex items-start justify-between gap-2">
+                                    <div className="min-w-0">
+                                        <p className="truncate text-[9px] uppercase tracking-[0.22em] text-amber-100/60">{mission.groupName}</p>
+                                        <h4 className="mt-1 font-display text-xl text-white">{mission.title}</h4>
+                                    </div>
+                                    <span className="shrink-0 text-[9px] uppercase tracking-[0.16em] text-slate-300/75">
+                                        {mission.status === "claimable" ? "Ready" : mission.status === "claimed" ? "Done" : "Live"}
+                                    </span>
+                                </div>
+                                <div className="mt-3 flex items-center justify-between text-[9px] uppercase tracking-[0.16em] text-slate-300/70">
+                                    <span>{mission.progress}/{mission.target}</span>
+                                    <span>{Math.min(100, Math.round((mission.progress / mission.target) * 100))}%</span>
+                                </div>
+                                <div className="mt-2 h-1.5 rounded-full bg-white/10">
+                                    <div
+                                        className="level-panel-fill h-full rounded-full"
+                                        style={{ width: `${Math.min(100, (mission.progress / mission.target) * 100)}%` }}
+                                    />
+                                </div>
                             </button>
-                        </div>
+                        ))}
+                    </div>
 
-                        <div className="mt-5 grid gap-3">
-                            {previewAchievements.map(achievement => (
-                                <button
-                                    key={achievement.id}
-                                    onClick={onOpenAchievements}
-                                    className="achievement-card achievement-card-cyan rounded-2xl border p-4 text-left transition hover:border-white/20"
-                                    type="button"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className={`achievement-medal achievement-medal-${achievement.accent}`}>
-                                            {achievement.iconLabel}
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] uppercase tracking-[0.28em] text-cyan-100/60">{achievement.groupName}</p>
-                                            <h4 className="mt-1 font-display text-2xl text-white">{achievement.title}</h4>
-                                        </div>
-                                    </div>
-                                    <p className="mt-3 text-sm text-slate-200/75">{achievement.description}</p>
-                                    <div className="mt-4 flex items-center justify-between text-[11px] uppercase tracking-[0.22em] text-slate-300/75">
-                                        <span>
-                                            {achievement.progress}/{achievement.target}
-                                        </span>
-                                        <span>{achievement.status === "unlocked" ? "Unlocked" : "Live"}</span>
-                                    </div>
-                                    <div className="mt-3 h-2 rounded-full bg-white/10">
+                    <div className="mt-4 rounded-2xl border border-white/10 bg-black/15 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-amber-100/70">
+                        {claimableCount > 0 ? `${claimableCount} ready` : "No rewards"}
+                    </div>
+                </aside>
+
+                <div className="order-1 rounded-3xl border border-white/10 bg-white/5 p-6 xl:order-2">
+                    <div className="text-center">
+                        <p className="text-xs uppercase tracking-[0.3em] text-slate-300/70">Games</p>
+                        <h2 className="mt-2 font-display text-4xl text-white">Lobby</h2>
+                    </div>
+                    <div className="mt-8 grid gap-4 md:grid-cols-2">
+                        {gameTiles.map((tile, index) => (
+                            <button
+                                key={tile.title}
+                                onClick={tile.onSelect === "coinflip" ? onSelectCoinFlip :
+                                    tile.onSelect === "dice" ? onSelectDice :
+                                    tile.onSelect === "blackjack" ? onSelectBlackjack :
+                                    tile.onSelect === "roulette" ? onSelectRoulette :
+                                    tile.onSelect === "crash" ? onSelectCrash :
+                                    tile.onSelect === "mines" ? onSelectMines :
+                                    onSelectSlots}
+                                className={`lobby-game-tile group relative overflow-hidden rounded-2xl border border-white/10 bg-linear-to-br from-slate-950/70 via-slate-900/70 to-slate-950/80 p-5 text-left transition hover:-translate-y-1 hover:border-white/20 hover:shadow-[0_25px_60px_rgba(14,116,144,0.35)] ${
+                                    index === gameTiles.length - 1 && gameTiles.length % 2 === 1 ? "lobby-game-tile-last md:col-span-2 md:justify-self-center" : ""
+                                }`}
+                                type="button"
+                            >
+                                <div className="relative flex h-full items-center">
+                                    <div className="flex min-w-0 items-center gap-4">
                                         <div
-                                            className="achievement-progress h-full rounded-full"
-                                            style={{ width: `${Math.min(100, (achievement.progress / achievement.target) * 100)}%` }}
-                                        />
+                                            className={`grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-linear-to-br ${tile.accent} text-2xl shadow-[0_12px_30px_rgba(248,113,113,0.35)]`}
+                                        >
+                                            {tile.icon}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-[10px] uppercase tracking-[0.18em] text-slate-400">{tile.subtitle}</p>
+                                            <h3 className="mt-1 font-display text-2xl leading-tight text-white">{tile.title}</h3>
+                                        </div>
                                     </div>
-                                </button>
-                            ))}
-                        </div>
-
-                        <div className="mt-4 text-xs uppercase tracking-[0.24em] text-cyan-100/70">
-                            {`${unlockedAchievements.length} of ${achievements.length} unlocked`}
-                        </div>
+                                </div>
+                            </button>
+                        ))}
                     </div>
                 </div>
+
+                <aside className="lobby-progress-card lobby-progress-achievements order-3 rounded-3xl border border-cyan-300/20 bg-[linear-gradient(135deg,rgba(8,47,73,0.34),rgba(15,23,42,0.84))] p-4">
+                    <div className="flex items-center justify-between gap-3">
+                        <div>
+                            <p className="text-[10px] uppercase tracking-[0.28em] text-cyan-100/70">Badges</p>
+                            <h3 className="mt-1 font-display text-2xl text-white">Progress</h3>
+                        </div>
+                        <button
+                            onClick={onOpenAchievements}
+                            className="arcade-button rounded-full border border-cyan-300/35 bg-cyan-300/10 px-3 py-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-cyan-100 transition hover:bg-cyan-300/16"
+                            type="button"
+                        >
+                            Open
+                        </button>
+                    </div>
+
+                    <div className="mt-4 grid gap-3">
+                        {previewAchievements.map(achievement => (
+                            <button
+                                key={achievement.id}
+                                onClick={onOpenAchievements}
+                                className="achievement-card achievement-card-cyan rounded-2xl border p-3 text-left transition hover:border-white/20"
+                                type="button"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className={`achievement-medal achievement-medal-${achievement.accent} !h-10 !min-h-10 !w-10 !min-w-10 rounded-xl text-[0.65rem]`}>
+                                        {achievement.iconLabel}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="truncate text-[9px] uppercase tracking-[0.22em] text-cyan-100/60">{achievement.groupName}</p>
+                                        <h4 className="mt-1 font-display text-xl text-white">{achievement.title}</h4>
+                                    </div>
+                                </div>
+                                <div className="mt-3 flex items-center justify-between text-[9px] uppercase tracking-[0.16em] text-slate-300/70">
+                                    <span>{achievement.progress}/{achievement.target}</span>
+                                    <span>{achievement.status === "unlocked" ? "Unlocked" : "Live"}</span>
+                                </div>
+                                <div className="mt-2 h-1.5 rounded-full bg-white/10">
+                                    <div
+                                        className="achievement-progress h-full rounded-full"
+                                        style={{ width: `${Math.min(100, (achievement.progress / achievement.target) * 100)}%` }}
+                                    />
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="mt-4 rounded-2xl border border-white/10 bg-black/15 px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-cyan-100/70">
+                        {`${unlockedAchievements.length} of ${achievements.length} unlocked`}
+                    </div>
+                </aside>
             </div>
         </section>
     );

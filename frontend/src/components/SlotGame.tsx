@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { BetRecord, SlotSpinResult } from "../lib/session";
 
 const SYMBOL_MAP: Record<string, string> = {
@@ -31,16 +31,56 @@ type SlotGameProps = {
 const betOptions = [1, 5, 10, 25, 50, 100];
 const minBet = 1;
 const maxBet = 10000;
-const randomSymbol = () => SYMBOL_NAMES[Math.floor(Math.random() * SYMBOL_NAMES.length)];
+const minSpinDurationMs = 850;
+const reelStopDelayMs = 320;
+const spinningSymbolLoop = [...SYMBOL_NAMES, ...SYMBOL_NAMES, ...SYMBOL_NAMES, ...SYMBOL_NAMES];
+
+function wait(ms: number) {
+    return new Promise(resolve => window.setTimeout(resolve, ms));
+}
+
+function SlotReel({ symbol, isRolling, tone, index }: { symbol: string; isRolling: boolean; tone: "win" | "loss" | "idle"; index: number }) {
+    const toneClass =
+        tone === "win"
+            ? "border-emerald-400/40 bg-emerald-400/10"
+            : tone === "loss"
+                ? "border-rose-400/40 bg-rose-400/10"
+                : "border-white/10 bg-white/5";
+
+    return (
+        <div className={`slot-reel-window ${toneClass} ${isRolling ? "slot-reel-window-rolling" : "slot-reel-window-settled"}`}>
+            {isRolling ? (
+                <div className="slot-reel-strip" style={{ animationDelay: `${index * -140}ms` }}>
+                    {spinningSymbolLoop.map((nextSymbol, symbolIndex) => (
+                        <div key={`${index}-${nextSymbol}-${symbolIndex}`} className="slot-reel-symbol">
+                            {SYMBOL_MAP[nextSymbol] ?? nextSymbol}
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <div className="slot-reel-final">
+                    {SYMBOL_MAP[symbol] ?? symbol}
+                </div>
+            )}
+        </div>
+    );
+}
 
 export function SlotGame({ balance, onSpin, onOutcomeReveal }: SlotGameProps) {
     const [reels, setReels] = useState<[string, string, string]>(["cherry", "cherry", "cherry"]);
+    const [rollingReels, setRollingReels] = useState<[boolean, boolean, boolean]>([false, false, false]);
     const [isSpinning, setIsSpinning] = useState(false);
     const [result, setResult] = useState<SlotSpinResult | null>(null);
     const [bet, setBet] = useState(10);
     const [customBet, setCustomBet] = useState("10");
     const [showPayouts, setShowPayouts] = useState(false);
-    const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const stopTimeoutsRef = useRef<Array<ReturnType<typeof setTimeout>>>([]);
+
+    useEffect(() => {
+        return () => {
+            stopTimeoutsRef.current.forEach(timeout => window.clearTimeout(timeout));
+        };
+    }, []);
 
     const parsed = Number(customBet);
     const isCustomBetValid = Number.isFinite(parsed) && parsed >= minBet && parsed <= maxBet;
@@ -49,33 +89,49 @@ export function SlotGame({ balance, onSpin, onOutcomeReveal }: SlotGameProps) {
 
     const handleSpin = async () => {
         if (!canSpin) return;
+        stopTimeoutsRef.current.forEach(timeout => window.clearTimeout(timeout));
+        stopTimeoutsRef.current = [];
         setIsSpinning(true);
+        setRollingReels([true, true, true]);
         setResult(null);
 
-        const interval = setInterval(() => {
-            setReels([randomSymbol(), randomSymbol(), randomSymbol()] as [string, string, string]);
-        }, 80);
-
         try {
-            const next = await onSpin(bet);
-            clearInterval(interval);
+            const [next] = await Promise.all([onSpin(bet), wait(minSpinDurationMs)]);
 
-            setReels(r => [next.reels[0], r[1], r[2]]);
-            setTimeout(() => setReels(r => [r[0], next.reels[1], r[2]]), 200);
-            setTimeout(() => {
-                setReels(next.reels);
+            next.reels.forEach((symbol, index) => {
+                const timeout = window.setTimeout(() => {
+                    setReels(current => {
+                        const updated = [...current] as [string, string, string];
+                        updated[index] = symbol;
+                        return updated;
+                    });
+                    setRollingReels(current => {
+                        const updated = [...current] as [boolean, boolean, boolean];
+                        updated[index] = false;
+                        return updated;
+                    });
+                }, index * reelStopDelayMs);
+                stopTimeoutsRef.current.push(timeout);
+            });
+
+            const finalTimeout = window.setTimeout(() => {
                 setResult(next);
                 onOutcomeReveal(next.bet);
                 setIsSpinning(false);
-            }, 400);
+                stopTimeoutsRef.current = [];
+            }, (next.reels.length - 1) * reelStopDelayMs + 180);
+            stopTimeoutsRef.current.push(finalTimeout);
         } catch (e) {
-            clearInterval(interval);
+            stopTimeoutsRef.current.forEach(timeout => window.clearTimeout(timeout));
+            stopTimeoutsRef.current = [];
+            setRollingReels([false, false, false]);
             setIsSpinning(false);
             console.error("Spin failed:", e);
         }
     };
 
     const won = result?.outcome === "win";
+    const reelTone = result ? (won ? "win" : "loss") : "idle";
 
     return (
         <section className="page-swap page-from-right w-full max-w-2xl rounded-3xl border border-white/10 bg-white/5 p-8 text-center">
@@ -108,20 +164,13 @@ export function SlotGame({ balance, onSpin, onOutcomeReveal }: SlotGameProps) {
                 {/* Reels */}
                 <div className="flex items-center gap-4">
                     {reels.map((symbol, i) => (
-                        <div
+                        <SlotReel
                             key={i}
-                            className={`grid h-24 w-24 place-items-center rounded-2xl border text-5xl transition-all duration-150 ${
-                                isSpinning
-                                    ? "border-white/10 bg-white/5 blur-[2px]"
-                                    : won
-                                    ? "border-emerald-400/40 bg-emerald-400/10"
-                                    : result
-                                    ? "border-rose-400/40 bg-rose-400/10"
-                                    : "border-white/10 bg-white/5"
-                            }`}
-                        >
-                            {SYMBOL_MAP[symbol] ?? symbol}
-                        </div>
+                            symbol={symbol}
+                            isRolling={rollingReels[i]}
+                            tone={reelTone}
+                            index={i}
+                        />
                     ))}
                 </div>
 

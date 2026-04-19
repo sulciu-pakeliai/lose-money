@@ -153,7 +153,7 @@ export function BlackjackGame({ balance, game, onStart, onHit, onStand, onOpenRu
     };
 
     return (
-        <section className="blackjack-table page-swap page-from-right w-full max-w-4xl overflow-hidden rounded-4xl border border-emerald-300/15 bg-[radial-gradient(circle_at_top,#0f5132,#052e16_42%,#03170f_100%)] p-6 shadow-[0_40px_120px_rgba(2,6,23,0.45)]">
+        <section className="game-shell game-shell-blackjack blackjack-table page-swap page-from-right w-full max-w-4xl overflow-hidden rounded-4xl border border-emerald-300/15 bg-[radial-gradient(circle_at_top,#0f5132,#052e16_42%,#03170f_100%)] p-6 shadow-[0_40px_120px_rgba(2,6,23,0.45)]">
             <div className="flex flex-col gap-6">
                 <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                     <div>
