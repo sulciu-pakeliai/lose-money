@@ -278,6 +278,7 @@ export type MinesActionResult = {
 export type SettingsDTO = {
     selfExclusion?: { excludedUntil: string };
     betLimit?: { maxBetAmount: number };
+    theme?: string;
 };
 
 type APIError = {
@@ -494,4 +495,16 @@ export async function setBetLimit(maxBetAmount: number): Promise<SettingsDTO> {
 
 export async function removeBetLimit(): Promise<SettingsDTO> {
     return apiFetch<SettingsDTO>("/api/settings/bet-limit", { method: "DELETE" });
+}
+
+export async function setTheme(theme: string): Promise<SettingsDTO> {
+    return apiFetch<SettingsDTO>("/api/settings/theme", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ theme }),
+    });
+}
+
+export async function removeTheme(): Promise<SettingsDTO> {
+    return apiFetch<SettingsDTO>("/api/settings/theme", { method: "DELETE" });
 }

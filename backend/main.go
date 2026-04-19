@@ -177,6 +177,8 @@ func main() {
 	mux.HandleFunc("DELETE /api/settings/self-exclusion", app.handleRemoveSelfExclusion)
 	mux.HandleFunc("POST /api/settings/bet-limit", app.handleSetBetLimit)
 	mux.HandleFunc("DELETE /api/settings/bet-limit", app.handleRemoveBetLimit)
+	mux.HandleFunc("POST /api/settings/theme", app.handleSetTheme)
+	mux.HandleFunc("DELETE /api/settings/theme", app.handleRemoveTheme)
 
 	server := &http.Server{
 		Addr:              ":" + port,
@@ -380,8 +382,11 @@ CREATE TABLE IF NOT EXISTS session_settings (
     session_id TEXT PRIMARY KEY REFERENCES sessions(id) ON DELETE CASCADE,
     self_excluded_until TIMESTAMPTZ,
     max_bet_amount BIGINT,
+    theme TEXT,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE session_settings ADD COLUMN IF NOT EXISTS theme TEXT;
 
 CREATE UNIQUE INDEX IF NOT EXISTS mines_active_session_idx
 	ON mines_games(session_id)

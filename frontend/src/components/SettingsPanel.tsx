@@ -5,8 +5,11 @@ import {
     removeSelfExclusion,
     setBetLimit,
     removeBetLimit,
+    setTheme,
+    removeTheme,
     type SettingsDTO,
 } from "../lib/session";
+import { useTheme } from "../lib/theme";
 
 const EXCLUSION_OPTIONS = [
     { label: "24 hours",  hours: 24 },
@@ -22,12 +25,19 @@ export function SettingsPanel({ isLoggedIn }: { isLoggedIn: boolean }) {
     const [saving, setSaving] = useState(false);
     const [betLimitInput, setBetLimitInput] = useState("");
     const [confirmExclusion, setConfirmExclusion] = useState<number | null>(null);
+    const { theme, setTheme: setAppTheme } = useTheme();
 
     useEffect(() => {
         fetchSettings()
             .then(setSettings)
             .catch(() => setSettings({}));
     }, []);
+
+    useEffect(() => {
+        if (settings?.theme && (settings.theme === "light" || settings.theme === "dark")) {
+            setAppTheme(settings.theme);
+        }
+    }, [settings?.theme, setAppTheme]);
 
     const handleSetExclusion = async (hours: number) => {
         if (confirmExclusion !== hours) {
@@ -80,6 +90,32 @@ export function SettingsPanel({ isLoggedIn }: { isLoggedIn: boolean }) {
             setSettings(await removeBetLimit());
         } catch (e) {
             setError(e instanceof Error ? e.message : "Failed to remove bet limit");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleSetTheme = async (newTheme: string) => {
+        setSaving(true);
+        setError(null);
+        try {
+            setSettings(await setTheme(newTheme));
+            setAppTheme(newTheme as "light" | "dark");
+        } catch (e) {
+            setError(e instanceof Error ? e.message : "Failed to set theme");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleRemoveTheme = async () => {
+        setSaving(true);
+        setError(null);
+        try {
+            setSettings(await removeTheme());
+            setAppTheme("dark"); // Default to dark
+        } catch (e) {
+            setError(e instanceof Error ? e.message : "Failed to remove theme");
         } finally {
             setSaving(false);
         }
@@ -189,12 +225,58 @@ export function SettingsPanel({ isLoggedIn }: { isLoggedIn: boolean }) {
                         <button
                             onClick={() => void handleSetBetLimit()}
                             disabled={saving || !isLoggedIn || !betLimitInput}
-                            className="rounded-full border border-cyan-400/40 bg-cyan-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="rounded-full border border-cyan-400/40 bg-cyan-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-50 set-limit-button"
                             type="button"
                         >
                             Set limit
                         </button>
                     </div>
+                )}
+            </div>
+
+            {/* Theme */}
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-300/70">Theme</p>
+                <p className="mt-2 text-sm text-slate-300/70">
+                    Choose your preferred UI theme.
+                </p>
+
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                    <button
+                        onClick={() => void handleSetTheme("light")}
+                        disabled={saving}
+                        className={`rounded-2xl border px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                            theme === "light"
+                                ? "selected-theme-light"
+                                : "border-white/10 bg-white/5 text-slate-200/70 hover:border-white/20"
+                        }`}
+                        type="button"
+                    >
+                        Light
+                    </button>
+                    <button
+                        onClick={() => void handleSetTheme("dark")}
+                        disabled={saving}
+                        className={`rounded-2xl border px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                            theme === "dark"
+                                ? "selected-theme-dark"
+                                : "border-white/10 bg-white/5 text-slate-200/70 hover:border-white/20"
+                        }`}
+                        type="button"
+                    >
+                        Dark
+                    </button>
+                </div>
+
+                {settings?.theme && (
+                    <button
+                        onClick={() => void handleRemoveTheme()}
+                        disabled={saving}
+                        className="mt-4 rounded-full border border-white/10 px-4 py-2 text-xs uppercase tracking-[0.2em] text-slate-400 transition hover:text-white disabled:opacity-50"
+                        type="button"
+                    >
+                        Reset to default
+                    </button>
                 )}
             </div>
         </section>

@@ -10,6 +10,7 @@ import (
 type settingsDTO struct {
 	SelfExclusion *selfExclusionDTO `json:"selfExclusion,omitempty"`
 	BetLimit      *betLimitDTO      `json:"betLimit,omitempty"`
+	Theme         *string           `json:"theme,omitempty"`
 }
 
 type selfExclusionDTO struct {
@@ -26,6 +27,10 @@ type selfExclusionRequest struct {
 
 type betLimitRequest struct {
 	MaxBetAmount int64 `json:"maxBetAmount"`
+}
+
+type themeRequest struct {
+	Theme string `json:"theme"`
 }
 
 func (a *application) handleGetSettings(w http.ResponseWriter, r *http.Request) {
@@ -164,11 +169,12 @@ func (a *application) loadSettings(ctx context.Context, sessionID string) (setti
 	var dto settingsDTO
 	var excludedUntil *time.Time
 	var maxBet *int64
+	var theme *string
 
 	err := a.db.QueryRow(ctx,
-		`SELECT self_excluded_until, max_bet_amount FROM session_settings WHERE session_id = $1`,
+		`SELECT self_excluded_until, max_bet_amount, theme FROM session_settings WHERE session_id = $1`,
 		sessionID,
-	).Scan(&excludedUntil, &maxBet)
+	).Scan(&excludedUntil, &maxBet, &theme)
 
 	if err != nil {
 		// No settings row yet — return empty defaults
@@ -181,6 +187,10 @@ func (a *application) loadSettings(ctx context.Context, sessionID string) (setti
 
 	if maxBet != nil {
 		dto.BetLimit = &betLimitDTO{MaxBetAmount: *maxBet}
+	}
+
+	if theme != nil {
+		dto.Theme = theme
 	}
 
 	return dto, nil
@@ -205,4 +215,56 @@ func (a *application) sessionBetLimit(ctx context.Context, sessionID string) *in
 		sessionID,
 	).Scan(&maxBet)
 	return maxBet
+}
+
+func (a *application) handleSetTheme(w http.ResponseWriter, r *http.Request) {
+	session, err := a.ensureSession(w, r)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load session")
+		return
+	}
+
+	var req themeRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if req.Theme != "light" && req.Theme != "dark" {
+		writeError(w, http.StatusBadRequest, "theme must be 'light' or 'dark'")
+		return
+	}
+
+	if _, err := a.db.Exec(r.Context(),
+		`INSERT INTO session_settings (session_id, theme, updated_at)
+		 VALUES ($1, $2, NOW())
+		 ON CONFLICT (session_id) DO UPDATE
+		 SET theme = $2, updated_at = NOW()`,
+		session.ID, req.Theme,
+	); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to save theme")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, settingsDTO{
+		Theme: &req.Theme,
+	})
+}
+
+func (a *application) handleRemoveTheme(w http.ResponseWriter, r *http.Request) {
+	session, err := a.ensureSession(w, r)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load session")
+		return
+	}
+
+	if _, err := a.db.Exec(r.Context(),
+		`UPDATE session_settings SET theme = NULL, updated_at = NOW() WHERE session_id = $1`,
+		session.ID,
+	); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to remove theme")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, settingsDTO{})
 }

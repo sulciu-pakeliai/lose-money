@@ -68,8 +68,8 @@ export function Header({
                 <div className="flex min-w-0 flex-col gap-4 rounded-4xl border border-white/10 bg-white/5 p-5">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="h-12 w-12 rounded-2xl bg-linear-to-br from-cyan-400 via-blue-500 to-indigo-600 p-0.5">
-                                <div className="grid h-full w-full place-items-center rounded-[14px] bg-slate-950/80 font-display text-lg tracking-wide">
+                            <div className="h-12 w-12 rounded-2xl logo-badge p-0.5">
+                                <div className="grid h-full w-full place-items-center rounded-[14px] logo-badge-inner bg-slate-950/80 font-display text-lg tracking-wide">
                                     LM
                                 </div>
                             </div>
@@ -78,13 +78,13 @@ export function Header({
                             </div>
                         </div>
                         <div className="flex flex-wrap items-center justify-end gap-3">
-                            <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.2em] text-slate-300/80">
+                            <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.2em] text-slate-300/80 balance-field">
                                 Balance
                                 <span className="ml-3 font-display text-base text-white">₵ {formatNumber(balance)}</span>
                             </div>
                             <button
                                 onClick={onTopUpClick}
-                                className="rounded-full border border-cyan-400/40 bg-cyan-400/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200 transition hover:bg-cyan-400/20"
+                                className="rounded-full border border-cyan-400/40 bg-cyan-400/10 px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200 transition hover:bg-cyan-400/20 topup-button"
                                 type="button"
                             >
                                 +
