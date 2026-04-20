@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { BetRecord, CrashCashoutResult, CrashGameState, CrashStartResult } from "../lib/session";
+import type { BetRecord, CrashCashoutResult, CrashGameState, CrashStartResult, CrashStatusResult } from "../lib/session";
 
 type CrashGameProps = {
     balance: number;
     game: CrashGameState | null;
     onStart: (amount: number) => Promise<CrashStartResult>;
     onCashout: () => Promise<CrashCashoutResult>;
+    onStatusCheck: () => Promise<CrashStatusResult>;
     onOpenRules: () => void;
     onOutcomeReveal: (bet: BetRecord) => void;
 };
@@ -13,6 +14,15 @@ type CrashGameProps = {
 const betOptions = [10, 25, 50, 100, 250, 500];
 const minBet = 1;
 const maxBet = 10000;
+const crashGrowthBaseMs = 4500;
+const crashGrowthExponent = 1.25;
+const crashGraphWindowMs = 12000;
+const crashGraphBaseMaxMultiplier = 5;
+const crashGraphStartX = 8;
+const crashGraphStartY = 88;
+const crashGraphWidth = 84;
+const crashGraphRise = 70;
+const crashStatusCheckIntervalMs = 220;
 
 function formatCredits(value: number) {
     return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value);
@@ -26,7 +36,18 @@ function multiplierForElapsed(ms: number) {
     if (ms <= 0) {
         return 1;
     }
-    return 1 + Math.pow(ms / 2800, 1.42);
+    return 1 + Math.pow(ms / crashGrowthBaseMs, crashGrowthExponent);
+}
+
+function elapsedForMultiplier(multiplier: number) {
+    if (multiplier <= 1) {
+        return 0;
+    }
+    return Math.pow(multiplier - 1, 1 / crashGrowthExponent) * crashGrowthBaseMs;
+}
+
+function resolvedCrashMultiplier(game: CrashGameState) {
+    return game.crashMultiplier ?? game.currentMultiplier ?? game.cashoutMultiplier ?? 1;
 }
 
 function getInitialMultiplier(game: CrashGameState | null) {
@@ -35,29 +56,76 @@ function getInitialMultiplier(game: CrashGameState | null) {
     }
     if (game.status === "active") {
         const elapsed = Math.max(0, Date.now() - new Date(game.startedAt).getTime());
-        return Math.min(game.crashMultiplier, multiplierForElapsed(elapsed));
+        return multiplierForElapsed(elapsed);
     }
-    return game.cashoutMultiplier ?? game.crashMultiplier;
+    return game.cashoutMultiplier ?? resolvedCrashMultiplier(game);
 }
 
 function getRoundMultiplierLabel(game: CrashGameState) {
-    return formatMultiplier(game.cashoutMultiplier ?? game.crashMultiplier);
+    return formatMultiplier(game.cashoutMultiplier ?? resolvedCrashMultiplier(game));
 }
 
-function buildCrashCurvePath(progress: number) {
-    const clampedProgress = Math.max(0.01, Math.min(1, progress));
+function graphMaxMultiplierFor(multiplier: number) {
+    const target = Math.max(crashGraphBaseMaxMultiplier, multiplier * 1.15);
+    const stops = [5, 10, 20, 50, 100, 200, 500];
+    return stops.find(stop => stop >= target) ?? Math.ceil(target / 500) * 500;
+}
+
+function graphAxisLabels(maxMultiplier: number) {
+    return [
+        maxMultiplier,
+        Math.pow(maxMultiplier, 2 / 3),
+        Math.pow(maxMultiplier, 1 / 3),
+        1,
+    ];
+}
+
+function formatAxisMultiplier(value: number) {
+    if (value >= 10) {
+        return `${Math.round(value)}x`;
+    }
+    return `${value.toFixed(1)}x`;
+}
+
+function crashGraphRangeFor(elapsedMs: number) {
+    const endMs = Math.max(crashGraphWindowMs, elapsedMs);
+    return {
+        startMs: endMs - crashGraphWindowMs,
+        endMs,
+    };
+}
+
+function graphYProgressForMultiplier(multiplier: number, maxMultiplier: number) {
+    const clampedMultiplier = Math.max(1, Math.min(maxMultiplier, multiplier));
+    return Math.log(clampedMultiplier) / Math.log(maxMultiplier);
+}
+
+function getCrashCurvePoint(elapsedMs: number, multiplier: number, range: { startMs: number; endMs: number }, maxMultiplier: number) {
+    const xProgress = Math.max(0, Math.min(1, (elapsedMs - range.startMs) / (range.endMs - range.startMs)));
+    const yProgress = graphYProgressForMultiplier(multiplier, maxMultiplier);
+
+    return {
+        x: crashGraphStartX + xProgress * crashGraphWidth,
+        y: crashGraphStartY - yProgress * crashGraphRise,
+    };
+}
+
+function buildCrashCurvePath(elapsedMs: number, endpointMultiplier: number, range: { startMs: number; endMs: number }, maxMultiplier: number) {
     const steps = 30;
     const points = Array.from({ length: steps }, (_, index) => {
-        const t = clampedProgress * (index / (steps - 1));
-        const x = 8 + t * 84;
-        const y = 88 - Math.pow(t, 1.58) * 70;
+        const t = index / (steps - 1);
+        const sampleElapsed = range.startMs + (elapsedMs - range.startMs) * t;
+        const sampleMultiplier = index === steps - 1
+            ? endpointMultiplier
+            : Math.min(endpointMultiplier, multiplierForElapsed(sampleElapsed));
+        const { x, y } = getCrashCurvePoint(sampleElapsed, sampleMultiplier, range, maxMultiplier);
         return `${x.toFixed(2)} ${y.toFixed(2)}`;
     });
 
     return `M ${points.join(" L ")}`;
 }
 
-export function CrashGame({ balance, game, onStart, onCashout, onOpenRules, onOutcomeReveal }: CrashGameProps) {
+export function CrashGame({ balance, game, onStart, onCashout, onStatusCheck, onOpenRules, onOutcomeReveal }: CrashGameProps) {
     const [mode, setMode] = useState<"manual" | "auto">("manual");
     const [bet, setBet] = useState(25);
     const [customBet, setCustomBet] = useState("25");
@@ -70,6 +138,8 @@ export function CrashGame({ balance, game, onStart, onCashout, onOpenRules, onOu
     const animationFrameRef = useRef<number | null>(null);
     const settlingGameIdRef = useRef<string | null>(null);
     const cashoutInFlightRef = useRef(false);
+    const crashStatusInFlightRef = useRef(false);
+    const lastCrashStatusCheckRef = useRef(0);
     const recordedRecentRoundIdsRef = useRef<Set<string>>(new Set());
 
     const activeGame = game?.status === "active" ? game : null;
@@ -85,23 +155,12 @@ export function CrashGame({ balance, game, onStart, onCashout, onOpenRules, onOu
     const potentialReturn = activeGame ? Math.floor(activeGame.betAmount * shownMultiplier) : Math.floor(bet * shownMultiplier);
     const profit = activeGame ? Math.max(0, potentialReturn - activeGame.betAmount) : 0;
 
-    const graphProgress = useMemo(() => {
-        if (!game) {
-            return 0;
-        }
-        if (game.status === "active") {
-            const elapsed = Math.max(0, Date.now() - new Date(game.startedAt).getTime());
-            return Math.min(1, elapsed / Math.max(1, game.crashAfterMs));
-        }
-        if (game.status === "cashed_out" && game.cashoutMultiplier) {
-            return Math.min(1, Math.max(0.08, game.cashoutMultiplier / Math.max(game.crashMultiplier, 1)));
-        }
-        return 1;
-    }, [displayMultiplier, game]);
-
-    const pathEndX = 8 + graphProgress * 84;
-    const pathEndY = 88 - Math.pow(graphProgress, 1.58) * 70;
-    const curvePath = buildCrashCurvePath(graphProgress);
+    const graphElapsedMs = useMemo(() => elapsedForMultiplier(shownMultiplier), [shownMultiplier]);
+    const graphMaxMultiplier = useMemo(() => graphMaxMultiplierFor(shownMultiplier), [shownMultiplier]);
+    const graphRange = useMemo(() => crashGraphRangeFor(graphElapsedMs), [graphElapsedMs]);
+    const pathEnd = getCrashCurvePoint(graphElapsedMs, shownMultiplier, graphRange, graphMaxMultiplier);
+    const curvePath = buildCrashCurvePath(graphElapsedMs, shownMultiplier, graphRange, graphMaxMultiplier);
+    const yAxisLabels = useMemo(() => graphAxisLabels(graphMaxMultiplier), [graphMaxMultiplier]);
     const roundTone = game?.status === "cashed_out" ? "win" : game?.status === "crashed" ? "loss" : "live";
 
     useEffect(() => {
@@ -117,6 +176,7 @@ export function CrashGame({ balance, game, onStart, onCashout, onOpenRules, onOu
         if (game?.status !== "active") {
             settlingGameIdRef.current = null;
             cashoutInFlightRef.current = false;
+            crashStatusInFlightRef.current = false;
         }
     }, [game?.id, game?.status]);
 
@@ -127,27 +187,27 @@ export function CrashGame({ balance, game, onStart, onCashout, onOpenRules, onOu
 
         const tick = () => {
             const elapsed = Math.max(0, Date.now() - new Date(activeGame.startedAt).getTime());
-            const nextMultiplier = Math.min(activeGame.crashMultiplier, multiplierForElapsed(elapsed));
+            const nextMultiplier = multiplierForElapsed(elapsed);
             setDisplayMultiplier(nextMultiplier);
 
             if (
                 mode === "auto" &&
                 isAutoTargetValid &&
                 nextMultiplier >= parsedAutoTarget &&
-                elapsed < activeGame.crashAfterMs &&
                 !cashoutInFlightRef.current
             ) {
                 void settleRound();
                 return;
             }
 
-            if (elapsed >= activeGame.crashAfterMs) {
-                setDisplayMultiplier(activeGame.crashMultiplier);
-                if (settlingGameIdRef.current !== activeGame.id) {
-                    settlingGameIdRef.current = activeGame.id;
-                    void settleRound();
-                }
-                return;
+            const now = Date.now();
+            if (
+                now - lastCrashStatusCheckRef.current >= crashStatusCheckIntervalMs &&
+                !crashStatusInFlightRef.current &&
+                !cashoutInFlightRef.current
+            ) {
+                lastCrashStatusCheckRef.current = now;
+                void checkCrashStatus();
             }
 
             animationFrameRef.current = window.requestAnimationFrame(tick);
@@ -179,6 +239,33 @@ export function CrashGame({ balance, game, onStart, onCashout, onOpenRules, onOu
         setRecentRounds(current => [getRoundMultiplierLabel(game), ...current].slice(0, 7));
     }, [game?.id, game?.status]);
 
+    const checkCrashStatus = async () => {
+        if (!activeGame || crashStatusInFlightRef.current || cashoutInFlightRef.current) {
+            return;
+        }
+
+        crashStatusInFlightRef.current = true;
+
+        try {
+            const next = await onStatusCheck();
+            if (!next.crash || !next.bet) {
+                return;
+            }
+
+            setLastResult(next as CrashCashoutResult);
+            setDisplayMultiplier(next.crash.cashoutMultiplier ?? resolvedCrashMultiplier(next.crash));
+            if (!recordedRecentRoundIdsRef.current.has(next.crash.id)) {
+                recordedRecentRoundIdsRef.current.add(next.crash.id);
+                setRecentRounds(current => [getRoundMultiplierLabel(next.crash), ...current].slice(0, 7));
+            }
+            onOutcomeReveal(next.bet);
+        } catch {
+            // Status polling is only used to discover a server-side crash.
+        } finally {
+            crashStatusInFlightRef.current = false;
+        }
+    };
+
     const settleRound = async () => {
         if (!activeGame || cashoutInFlightRef.current) {
             return;
@@ -191,7 +278,7 @@ export function CrashGame({ balance, game, onStart, onCashout, onOpenRules, onOu
         try {
             const next = await onCashout();
             setLastResult(next);
-            setDisplayMultiplier(next.crash.cashoutMultiplier ?? next.crash.crashMultiplier);
+            setDisplayMultiplier(next.crash.cashoutMultiplier ?? resolvedCrashMultiplier(next.crash));
             if (!recordedRecentRoundIdsRef.current.has(next.crash.id)) {
                 recordedRecentRoundIdsRef.current.add(next.crash.id);
                 setRecentRounds(current => [getRoundMultiplierLabel(next.crash), ...current].slice(0, 7));
@@ -426,29 +513,30 @@ export function CrashGame({ balance, game, onStart, onCashout, onOpenRules, onOu
 
                     <div className="crash-stage">
                         <div className="crash-axis crash-axis-y">
-                            <span>5.0x</span>
-                            <span>3.0x</span>
-                            <span>1.5x</span>
-                            <span>1.0x</span>
+                            {yAxisLabels.map(label => (
+                                <span key={label}>{formatAxisMultiplier(label)}</span>
+                            ))}
                         </div>
                         <div className="crash-axis crash-axis-x">
                             <span>0s</span>
-                            <span>3s</span>
-                            <span>6s</span>
-                            <span>9s</span>
+                            <span>4s</span>
+                            <span>8s</span>
+                            <span>12s</span>
                         </div>
 
-                        <svg className="crash-curve" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                            <path className="crash-curve-shadow" d={curvePath} />
-                            <path className={`crash-curve-line crash-curve-${roundTone}`} d={curvePath} />
-                        </svg>
+                        <div className="crash-plot">
+                            <svg className="crash-curve" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                                <path className="crash-curve-shadow" d={curvePath} />
+                                <path className={`crash-curve-line crash-curve-${roundTone}`} d={curvePath} />
+                            </svg>
 
-                        {game && (
-                            <div
-                                className={`crash-rocket crash-rocket-${roundTone}`}
-                                style={{ left: `${pathEndX}%`, top: `${pathEndY}%` }}
-                            />
-                        )}
+                            {game && (
+                                <div
+                                    className={`crash-rocket crash-rocket-${roundTone}`}
+                                    style={{ left: `${pathEnd.x}%`, top: `${pathEnd.y}%` }}
+                                />
+                            )}
+                        </div>
 
                         <div className={`crash-multiplier crash-multiplier-${roundTone}`}>
                             {game ? formatMultiplier(shownMultiplier) : "1.00x"}
@@ -482,9 +570,9 @@ export function CrashGame({ balance, game, onStart, onCashout, onOpenRules, onOu
                                 {lastResult
                                     ? lastResult.bet.outcome === "win"
                                         ? formatMultiplier(lastResult.crash.cashoutMultiplier ?? 1)
-                                        : formatMultiplier(lastResult.crash.crashMultiplier)
+                                        : formatMultiplier(resolvedCrashMultiplier(lastResult.crash))
                                     : game && game.status !== "active"
-                                        ? formatMultiplier(game.crashMultiplier)
+                                        ? formatMultiplier(resolvedCrashMultiplier(game))
                                         : "Hidden"}
                             </p>
                             {lastResult && (

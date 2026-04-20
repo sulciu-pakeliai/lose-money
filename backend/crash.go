@@ -17,6 +17,8 @@ const (
 	crashStatusActive    = "active"
 	crashStatusCashedOut = "cashed_out"
 	crashStatusCrashed   = "crashed"
+	crashGrowthBase      = 4.5
+	crashGrowthExponent  = 1.25
 )
 
 type crashGame struct {
@@ -35,12 +37,12 @@ type crashGame struct {
 type crashGameState struct {
 	ID                string     `json:"id"`
 	BetAmount         int64      `json:"betAmount"`
-	CrashMultiplier   float64    `json:"crashMultiplier"`
+	CrashMultiplier   *float64   `json:"crashMultiplier,omitempty"`
 	CashoutMultiplier *float64   `json:"cashoutMultiplier,omitempty"`
 	Payout            *int64     `json:"payout,omitempty"`
 	Status            string     `json:"status"`
 	StartedAt         time.Time  `json:"startedAt"`
-	CrashAfterMs      int64      `json:"crashAfterMs"`
+	CrashAfterMs      *int64     `json:"crashAfterMs,omitempty"`
 	ElapsedMs         int64      `json:"elapsedMs"`
 	CurrentMultiplier float64    `json:"currentMultiplier"`
 	CanCashout        bool       `json:"canCashout"`
@@ -66,6 +68,16 @@ type crashCashoutResponse struct {
 	Session       sessionDTO        `json:"session"`
 	Crash         *crashGameState   `json:"crash"`
 	Bet           betRecord         `json:"bet"`
+	TopUp         topUpPolicy       `json:"topUp"`
+	Missions      []missionDTO      `json:"missions"`
+	Achievements  []achievementDTO  `json:"achievements"`
+	Notifications []notificationDTO `json:"notifications"`
+}
+
+type crashStatusResponse struct {
+	Session       sessionDTO        `json:"session"`
+	Crash         *crashGameState   `json:"crash"`
+	Bet           *betRecord        `json:"bet,omitempty"`
 	TopUp         topUpPolicy       `json:"topUp"`
 	Missions      []missionDTO      `json:"missions"`
 	Achievements  []achievementDTO  `json:"achievements"`
@@ -333,6 +345,122 @@ func (a *application) handleCrashCashout(w http.ResponseWriter, r *http.Request)
 	})
 }
 
+func (a *application) handleCrashStatus(w http.ResponseWriter, r *http.Request) {
+	session, err := a.ensureSession(w, r)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load session")
+		return
+	}
+
+	tx, err := a.db.Begin(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to start transaction")
+		return
+	}
+	defer tx.Rollback(r.Context())
+
+	game, err := a.loadActiveCrashTx(r.Context(), tx, session.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to load crash round")
+		return
+	}
+
+	currentSession := session
+	var historyEntry *betRecord
+	stateNow := time.Now().UTC()
+	if game != nil {
+		now := time.Now().UTC()
+		stateNow = now
+		crashAfter := crashDurationForMultiplierCents(game.CrashMultiplierCents)
+		if now.Sub(game.StartedAt) >= crashAfter {
+			lockedSession, err := a.lockSession(r.Context(), tx, session.ID)
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, "failed to lock session")
+				return
+			}
+
+			entry, nextSession, ok := a.settleCrashLossTx(w, r, tx, game, lockedSession, crashAfter, now)
+			if !ok {
+				return
+			}
+			historyEntry = entry
+			currentSession = nextSession
+		}
+	}
+
+	if err := tx.Commit(r.Context()); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to commit crash status")
+		return
+	}
+
+	missions, achievements, notifications, ok := a.loadProgressPayload(w, r, session.ID)
+	if !ok {
+		return
+	}
+
+	writeJSON(w, http.StatusOK, crashStatusResponse{
+		Session:       toSessionDTO(currentSession),
+		Crash:         toCrashGameState(game, stateNow),
+		Bet:           historyEntry,
+		TopUp:         buildTopUpPolicy(currentSession.LastTopUpAt),
+		Missions:      missions,
+		Achievements:  achievements,
+		Notifications: notifications,
+	})
+}
+
+func (a *application) settleCrashLossTx(w http.ResponseWriter, r *http.Request, tx pgx.Tx, game *crashGame, lockedSession sessionRecord, crashAfter time.Duration, now time.Time) (*betRecord, sessionRecord, bool) {
+	payout := int64(0)
+	completedAt := game.StartedAt.Add(crashAfter)
+	game.Status = crashStatusCrashed
+	game.CashoutMultiplierCents = nil
+	game.Payout = &payout
+	game.UpdatedAt = now
+	game.CompletedAt = &completedAt
+
+	nextXP := lockedSession.XP + calculateXPReward("crash", game.BetAmount, "loss", "crashed")
+	nextGamesPlayed := lockedSession.GamesPlayed + 1
+	if err := a.updateSessionBalance(r.Context(), tx, lockedSession.ID, lockedSession.Balance, nextXP, nextGamesPlayed, lockedSession.LastTopUpAt); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to settle crash balance")
+		return nil, sessionRecord{}, false
+	}
+
+	if err := a.updateCrashGame(r.Context(), tx, game); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to settle crash round")
+		return nil, sessionRecord{}, false
+	}
+
+	historyEntry := buildCrashHistory(game, lockedSession.Balance, "loss")
+	if err := a.insertBetHistory(r.Context(), tx, lockedSession.ID, &historyEntry); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to record crash result")
+		return nil, sessionRecord{}, false
+	}
+
+	if err := a.applyMissionProgressTx(r.Context(), tx, lockedSession.ID, missionProgressEvent{
+		Game:    "crash",
+		Outcome: "loss",
+		Amount:  game.BetAmount,
+	}); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to update missions")
+		return nil, sessionRecord{}, false
+	}
+
+	if err := a.applyAchievementProgressTx(r.Context(), tx, lockedSession.ID, achievementProgressEvent{
+		Game:    "crash",
+		Outcome: "loss",
+		Amount:  game.BetAmount,
+		Status:  "crashed",
+	}); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to update achievements")
+		return nil, sessionRecord{}, false
+	}
+
+	nextSession := lockedSession
+	nextSession.XP = nextXP
+	nextSession.GamesPlayed = nextGamesPlayed
+	return &historyEntry, nextSession, true
+}
+
 func (a *application) loadActiveCrash(ctx context.Context, sessionID string) (*crashGameState, error) {
 	game, err := a.loadActiveCrashRecord(ctx, a.db, sessionID)
 	if err != nil {
@@ -513,15 +641,24 @@ func toCrashGameState(game *crashGame, now time.Time) *crashGameState {
 		cashoutMultiplier = &value
 	}
 
+	var crashMultiplier *float64
+	var crashAfterMs *int64
+	if game.Status != crashStatusActive {
+		multiplier := centsToMultiplier(game.CrashMultiplierCents)
+		durationMs := int64(crashAfter / time.Millisecond)
+		crashMultiplier = &multiplier
+		crashAfterMs = &durationMs
+	}
+
 	return &crashGameState{
 		ID:                game.ID,
 		BetAmount:         game.BetAmount,
-		CrashMultiplier:   centsToMultiplier(game.CrashMultiplierCents),
+		CrashMultiplier:   crashMultiplier,
 		CashoutMultiplier: cashoutMultiplier,
 		Payout:            game.Payout,
 		Status:            game.Status,
 		StartedAt:         game.StartedAt,
-		CrashAfterMs:      int64(crashAfter / time.Millisecond),
+		CrashAfterMs:      crashAfterMs,
 		ElapsedMs:         int64(elapsed / time.Millisecond),
 		CurrentMultiplier: centsToMultiplier(currentCents),
 		CanCashout:        canCashout,
@@ -571,7 +708,7 @@ func crashMultiplierCentsForElapsed(elapsed time.Duration) int64 {
 	}
 
 	seconds := elapsed.Seconds()
-	multiplier := 1 + math.Pow(seconds/2.8, 1.42)
+	multiplier := 1 + math.Pow(seconds/crashGrowthBase, crashGrowthExponent)
 	if multiplier < 1 {
 		multiplier = 1
 	}
@@ -584,7 +721,7 @@ func crashDurationForMultiplierCents(cents int64) time.Duration {
 	}
 
 	multiplier := float64(cents) / 100
-	seconds := math.Pow(multiplier-1, 1/1.42) * 2.8
+	seconds := math.Pow(multiplier-1, 1/crashGrowthExponent) * crashGrowthBase
 	if seconds < 0.35 {
 		seconds = 0.35
 	}

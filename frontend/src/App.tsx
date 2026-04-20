@@ -12,6 +12,7 @@ import {
     markNotificationsRead,
     revealMinesCell,
     cashOutCrashRound,
+    checkCrashRound,
     submitDiceRoll,
     submitRoulette,
     startMinesRound,
@@ -28,6 +29,7 @@ import {
     type CoinFlipResult,
     type CrashCashoutResult,
     type CrashStartResult,
+    type CrashStatusResult,
     type DiceBetType,
     type DiceRollResult,
     type MissionClaimResult,
@@ -275,6 +277,23 @@ export function App() {
         );
     };
 
+    const applyCrashStatus = (next: CrashStatusResult) => {
+        setState(current =>
+            current
+                ? {
+                    ...current,
+                    session: next.session,
+                    crash: next.crash,
+                    history: next.bet ? [next.bet, ...current.history].slice(0, 100) : current.history,
+                    topUp: next.topUp,
+                    missions: next.missions,
+                    achievements: next.achievements,
+                    notifications: next.notifications,
+                }
+                : current,
+        );
+    };
+
     const applyMines = (next: MinesActionResult) => {
         setState(current =>
             current
@@ -372,6 +391,12 @@ export function App() {
     const handleCrashCashout = async () => {
         const next = await cashOutCrashRound();
         applyCrashCashout(next);
+        return next;
+    };
+
+    const handleCrashStatus = async () => {
+        const next = await checkCrashRound();
+        applyCrashStatus(next);
         return next;
     };
 
@@ -582,6 +607,7 @@ export function App() {
                             game={state.crash ?? null}
                             onStart={handleCrashStart}
                             onCashout={handleCrashCashout}
+                            onStatusCheck={handleCrashStatus}
                             onOpenRules={() => openRules("crash")}
                             onOutcomeReveal={setAvatarOutcome}
                         />

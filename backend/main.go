@@ -168,6 +168,7 @@ func main() {
 	mux.HandleFunc("GET /api/profile", app.handleProfile)
 	mux.HandleFunc("POST /api/slots/spin", app.handleSlotSpin)
 	mux.HandleFunc("POST /api/crash/start", app.handleCrashStart)
+	mux.HandleFunc("POST /api/crash/status", app.handleCrashStatus)
 	mux.HandleFunc("POST /api/crash/cashout", app.handleCrashCashout)
 	mux.HandleFunc("POST /api/mines/start", app.handleMinesStart)
 	mux.HandleFunc("POST /api/mines/reveal", app.handleMinesReveal)

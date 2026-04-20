@@ -1409,10 +1409,18 @@ input[type="number"] {
   justify-content: space-between;
 }
 
-.crash-curve {
+.crash-plot {
   position: absolute;
   inset: 7% 5% 9% 6%;
   z-index: 3;
+  overflow: visible;
+}
+
+.crash-curve {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   overflow: visible;
 }
 

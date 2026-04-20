@@ -215,12 +215,12 @@ export type SlotSpinResult = {
 export type CrashGameState = {
     id: string;
     betAmount: number;
-    crashMultiplier: number;
+    crashMultiplier?: number;
     cashoutMultiplier?: number;
     payout?: number;
     status: "active" | "cashed_out" | "crashed";
     startedAt: string;
-    crashAfterMs: number;
+    crashAfterMs?: number;
     elapsedMs: number;
     currentMultiplier: number;
     canCashout: boolean;
@@ -242,6 +242,16 @@ export type CrashCashoutResult = {
     session: Session;
     crash: CrashGameState;
     bet: BetRecord;
+    topUp: TopUpPolicy;
+    missions: Mission[];
+    achievements: Achievement[];
+    notifications: AppNotification[];
+};
+
+export type CrashStatusResult = {
+    session: Session;
+    crash: CrashGameState | null;
+    bet?: BetRecord;
     topUp: TopUpPolicy;
     missions: Mission[];
     achievements: Achievement[];
@@ -443,6 +453,12 @@ export async function startCrashRound(amount: number): Promise<CrashStartResult>
 
 export async function cashOutCrashRound(): Promise<CrashCashoutResult> {
     return apiFetch<CrashCashoutResult>("/api/crash/cashout", {
+        method: "POST",
+    });
+}
+
+export async function checkCrashRound(): Promise<CrashStatusResult> {
+    return apiFetch<CrashStatusResult>("/api/crash/status", {
         method: "POST",
     });
 }
