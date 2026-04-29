@@ -1,0 +1,14 @@
+linters:
+  enable:
+    - revive
+    - errcheck
+
+linters-settings:
+  revive:
+    rules:
+      - name: exported
+        severity: warning
+      - name: error-return
+        severity: error
+      - name: unused-parameter
+        severity: warning
