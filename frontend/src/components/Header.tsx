@@ -1,5 +1,6 @@
 import type { Session } from "../lib/session";
 import { SessionTimer } from "./SessionTimer";
+import lmLogo from "../logo.svg";
 
 type HeaderProps = {
     session: Session | null;
@@ -70,7 +71,7 @@ export function Header({
                         <div className="flex min-w-0 shrink-0 items-center gap-3">
                             <div className="h-12 w-12 rounded-2xl logo-badge p-0.5">
                                 <div className="grid h-full w-full place-items-center rounded-[14px] logo-badge-inner bg-slate-950/80 font-display text-lg tracking-wide">
-                                    LM
+                                    <img src={lmLogo} alt="LoseMoney logo" className="h-full w-full rounded-[14px]" />
                                 </div>
                             </div>
                             <div>
