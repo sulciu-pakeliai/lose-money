@@ -251,12 +251,13 @@ export function CrashGame({ balance, game, onStart, onCashout, onStatusCheck, on
             if (!next.crash || !next.bet) {
                 return;
             }
+            const crash = next.crash;
 
             setLastResult(next as CrashCashoutResult);
-            setDisplayMultiplier(next.crash.cashoutMultiplier ?? resolvedCrashMultiplier(next.crash));
-            if (!recordedRecentRoundIdsRef.current.has(next.crash.id)) {
-                recordedRecentRoundIdsRef.current.add(next.crash.id);
-                setRecentRounds(current => [getRoundMultiplierLabel(next.crash), ...current].slice(0, 7));
+            setDisplayMultiplier(crash.cashoutMultiplier ?? resolvedCrashMultiplier(crash));
+            if (!recordedRecentRoundIdsRef.current.has(crash.id)) {
+                recordedRecentRoundIdsRef.current.add(crash.id);
+                setRecentRounds(current => [getRoundMultiplierLabel(crash), ...current].slice(0, 7));
             }
             onOutcomeReveal(next.bet);
         } catch {

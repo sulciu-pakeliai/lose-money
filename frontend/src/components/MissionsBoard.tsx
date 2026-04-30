@@ -72,7 +72,7 @@ export function MissionsBoard({ missions, onClaim }: MissionsBoardProps) {
     };
 
     return (
-        <section className="page-swap page-from-right w-full max-w-5xl rounded-[2rem] border border-white/10 bg-white/5 p-6">
+        <section className="page-swap page-from-right w-full max-w-5xl rounded-4xl border border-white/10 bg-white/5 p-6">
             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                 <div>
                     <h2 className="mt-2 font-display text-4xl text-white">Daily missions</h2>

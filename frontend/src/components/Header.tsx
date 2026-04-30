@@ -216,19 +216,19 @@ export function Header({
                                 <div className="h-6" />
                             ) : session?.userId ? (
                                 <div className="flex min-w-0 items-center gap-1.5">
-                                    <p className="max-w-16 truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-amber-100/75">
+                                    <p className="max-w-16 truncate text-[10px] font-semibold uppercase tracking-widest text-amber-100/75">
                                         {accountName ?? "Account"}
                                     </p>
                                     <button
                                         onClick={onProfileClick}
-                                        className="rounded-full border border-amber-300/30 bg-amber-300/8 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.1em] text-amber-200 transition hover:bg-amber-300/12"
+                                        className="rounded-full border border-amber-300/30 bg-amber-300/8 px-2 py-1 text-[9px] font-semibold uppercase tracking-widest text-amber-200 transition hover:bg-amber-300/12"
                                         type="button"
                                     >
                                         Profile
                                     </button>
                                     <button
                                         onClick={onLogoutClick}
-                                        className="rounded-full border border-rose-400/50 bg-rose-500/20 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.1em] text-rose-200 transition hover:bg-rose-500/30"
+                                        className="rounded-full border border-rose-400/50 bg-rose-500/20 px-2 py-1 text-[9px] font-semibold uppercase tracking-widest text-rose-200 transition hover:bg-rose-500/30"
                                         type="button"
                                     >
                                         Out

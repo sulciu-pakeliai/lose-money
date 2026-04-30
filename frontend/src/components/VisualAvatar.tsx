@@ -22,7 +22,8 @@ type AvatarView =
     | "history"
     | "topup"
     | "profile"
-    | "notifications";
+    | "notifications"
+    | "settings";
 type AvatarGameKey = "coinflip" | "dice" | "blackjack" | "roulette" | "slots" | "crash" | "mines";
 
 type DialogueBeat = {
@@ -195,7 +196,10 @@ function getOutcomeScene(event: BetRecord, view: AvatarView): AvatarScene | null
             : event.outcome === "loss"
                 ? lossDialogueSets
                 : pushDialogueSets;
-    const selectedSet = dialogueSets[stableIndex(`${event.id}-${event.outcome}-${event.result}`, dialogueSets.length)];
+    const selectedSet = dialogueSets[stableIndex(`${event.id}-${event.outcome}-${event.result}`, dialogueSets.length)] ?? dialogueSets[0];
+    if (!selectedSet) {
+        return null;
+    }
 
     return {
         signature: `outcome-${event.id}-${event.outcome}`,
@@ -304,9 +308,9 @@ function getDiceRecommendation(state: AppState, lastOutcome: BetRecord | null) {
         { lane: "Low 2-6", reason: "it covers five totals and sounds responsible" },
         { lane: "High 8-12", reason: "it covers five totals and lets you stare down the table" },
         { lane: "Lucky 7", reason: "it pays louder, even if it lands narrower" },
-    ];
+    ] as const;
 
-    return picks[stableIndex(`${state.session.id}-${state.session.gamesPlayed}-${state.session.xp}`, picks.length)];
+    return picks[stableIndex(`${state.session.id}-${state.session.gamesPlayed}-${state.session.xp}`, picks.length)] ?? picks[0];
 }
 
 function getSlotRecommendation(state: AppState, lastOutcome: BetRecord | null) {

@@ -8,6 +8,7 @@ type LobbyProps = {
     onSelectCrash: () => void;
     onSelectMines: () => void;
     onSelectSlots: () => void;
+    onSelectTopUp: () => void;
     onOpenMissions: () => void;
     onOpenAchievements: () => void;
     missions: Mission[];
@@ -74,6 +75,7 @@ export function Lobby({
     onSelectCrash,
     onSelectMines,
     onSelectSlots,
+    onSelectTopUp: _onSelectTopUp,
     onOpenMissions,
     onOpenAchievements,
     missions,
@@ -208,7 +210,7 @@ export function Lobby({
                                 type="button"
                             >
                                 <div className="flex items-center gap-3">
-                                    <div className={`achievement-medal achievement-medal-${achievement.accent} !h-10 !min-h-10 !w-10 !min-w-10 rounded-xl text-[0.65rem]`}>
+                                    <div className={`achievement-medal achievement-medal-${achievement.accent} h-10! min-h-10! w-10! min-w-10! rounded-xl text-[0.65rem]`}>
                                         {achievement.iconLabel}
                                     </div>
                                     <div className="min-w-0">

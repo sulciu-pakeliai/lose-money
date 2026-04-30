@@ -140,7 +140,7 @@ export function RouletteGame({ balance, onSpin, onOpenRules, onOutcomeReveal }: 
     const resultTone = spinResult && revealOutcome ? (spinResult.bet.outcome === "win" ? "win" : "loss") : "idle";
 
     return (
-        <section className="game-shell game-shell-roulette page-swap page-from-right w-full max-w-5xl rounded-4xl border border-fuchsia-300/20 bg-[radial-gradient(circle_at_top,_rgba(190,18,60,0.18),_rgba(15,23,42,0.96)_48%,_rgba(8,15,33,0.98)_100%)] p-6 shadow-[0_40px_120px_rgba(2,6,23,0.45)]">
+        <section className="game-shell game-shell-roulette page-swap page-from-right w-full max-w-5xl rounded-4xl border border-fuchsia-300/20 bg-[radial-gradient(circle_at_top,rgba(190,18,60,0.18),rgba(15,23,42,0.96)_48%,rgba(8,15,33,0.98)_100%)] p-6 shadow-[0_40px_120px_rgba(2,6,23,0.45)]">
             <div className="flex flex-col gap-6 lg:flex-row">
                 <div className="space-y-4 lg:w-7/12">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
