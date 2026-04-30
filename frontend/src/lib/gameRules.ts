@@ -1,4 +1,4 @@
-export type GameRuleKey = "coinflip" | "blackjack" | "dice" | "roulette" | "crash" | "mines";
+export type GameRuleKey = "coinflip" | "blackjack" | "dice" | "roulette" | "crash" | "mines" | "slots";
 
 export type GameRuleDefinition = {
     eyebrow: string;
@@ -159,5 +159,29 @@ export const GAME_RULES: Record<GameRuleKey, GameRuleDefinition> = {
             },
         ],
         footer: "A perfect clear of all safe tiles auto-settles as a win at the maximum round multiplier.",
+    },
+    slots: {
+        eyebrow: "Quick Guide",
+        title: "How Slots Works",
+        summary: "Spin three reels and match symbols on a single payline. Better combinations pay higher multipliers.",
+        steps: [
+            {
+                title: "Set your wager",
+                body: "Choose a preset chip or type a custom amount before spinning.",
+            },
+            {
+                title: "Spin the reels",
+                body: "When you spin, the backend resolves the final three symbols for that round.",
+            },
+            {
+                title: "Match the payline",
+                body: "Three of a kind pays according to the table. Higher-tier symbols return bigger multipliers.",
+            },
+            {
+                title: "Collect or try again",
+                body: "Winning spins credit your balance immediately and are added to your history.",
+            },
+        ],
+        footer: "Tip: Open the payout table to compare each symbol line and multiplier before placing larger wagers.",
     },
 };

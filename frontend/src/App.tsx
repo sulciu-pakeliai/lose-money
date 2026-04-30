@@ -99,7 +99,7 @@ export function App() {
     }, []);
 
     useEffect(() => {
-        if (view !== "coinflip" && view !== "blackjack" && view !== "dice" && view !== "crash" && view !== "mines") {
+        if (view !== "coinflip" && view !== "blackjack" && view !== "dice" && view !== "crash" && view !== "mines" && view !== "slots") {
             return;
         }
 
@@ -627,6 +627,7 @@ export function App() {
                         <SlotGame 
                             balance={state.session.balance} 
                             onSpin={handleSlotSpin} 
+                            onOpenRules={() => openRules("slots")}
                             onOutcomeReveal={setAvatarOutcome}
                         />
                     )}
