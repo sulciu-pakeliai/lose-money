@@ -123,13 +123,19 @@ func TestLevelAndRewardHelpers(t *testing.T) {
 			},
 		},
 		{
-			name: "allowed top up values",
+			name: "valid top up range",
 			check: func(t *testing.T) {
-				if !isAllowedTopUp(100) {
-					t.Fatal("isAllowedTopUp(100) = false, want true")
+				if !isValidTopUpAmount(minTopUpAmount) {
+					t.Fatalf("isValidTopUpAmount(minTopUpAmount=%d) = false, want true", minTopUpAmount)
 				}
-				if isAllowedTopUp(150) {
-					t.Fatal("isAllowedTopUp(150) = true, want false")
+				if !isValidTopUpAmount(maxTopUpAmount) {
+					t.Fatalf("isValidTopUpAmount(maxTopUpAmount=%d) = false, want true", maxTopUpAmount)
+				}
+				if isValidTopUpAmount(minTopUpAmount - 1) {
+					t.Fatalf("isValidTopUpAmount(%d) = true, want false", minTopUpAmount-1)
+				}
+				if isValidTopUpAmount(maxTopUpAmount + 1) {
+					t.Fatalf("isValidTopUpAmount(%d) = true, want false", maxTopUpAmount+1)
 				}
 			},
 		},
@@ -205,6 +211,12 @@ func TestTopUpPolicyHelpers(t *testing.T) {
 	}
 	if len(policy.AllowedAmounts) != len(allowedTopUpAmounts) {
 		t.Fatalf("AllowedAmounts length = %d, want %d", len(policy.AllowedAmounts), len(allowedTopUpAmounts))
+	}
+	if policy.MinAmount != minTopUpAmount {
+		t.Fatalf("MinAmount = %d, want %d", policy.MinAmount, minTopUpAmount)
+	}
+	if policy.MaxAmount != maxTopUpAmount {
+		t.Fatalf("MaxAmount = %d, want %d", policy.MaxAmount, maxTopUpAmount)
 	}
 }
 

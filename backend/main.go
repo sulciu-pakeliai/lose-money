@@ -23,6 +23,8 @@ const (
 	sessionCookieName = "lm_session"
 	startBalance      = int64(1000)
 	maxBetAmount      = int64(10000)
+	minTopUpAmount    = int64(1)
+	maxTopUpAmount    = int64(10000)
 	topUpCooldown     = 30 * time.Second
 	historyLimit      = 20
 	baseXPPerLevel    = int64(100)
@@ -74,6 +76,8 @@ type betRecord struct {
 
 type topUpPolicy struct {
 	AllowedAmounts  []int64    `json:"allowedAmounts"`
+	MinAmount       int64      `json:"minAmount"`
+	MaxAmount       int64      `json:"maxAmount"`
 	CooldownSeconds int        `json:"cooldownSeconds"`
 	AvailableAt     *time.Time `json:"availableAt,omitempty"`
 }
@@ -688,8 +692,8 @@ func (a *application) handleTopUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !isAllowedTopUp(req.Amount) {
-		writeError(w, http.StatusBadRequest, "amount must match an allowed faucet value")
+	if !isValidTopUpAmount(req.Amount) {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("amount must be between %d and %d", minTopUpAmount, maxTopUpAmount))
 		return
 	}
 
@@ -1022,6 +1026,8 @@ func normalizeSide(raw string) string {
 func buildTopUpPolicy(lastTopUpAt *time.Time) topUpPolicy {
 	return topUpPolicy{
 		AllowedAmounts:  allowedTopUpAmounts,
+		MinAmount:       minTopUpAmount,
+		MaxAmount:       maxTopUpAmount,
 		CooldownSeconds: int(topUpCooldown / time.Second),
 		AvailableAt:     nextTopUpAt(lastTopUpAt),
 	}
@@ -1040,13 +1046,8 @@ func nextTopUpAt(lastTopUpAt *time.Time) *time.Time {
 	return nil
 }
 
-func isAllowedTopUp(amount int64) bool {
-	for _, candidate := range allowedTopUpAmounts {
-		if amount == candidate {
-			return true
-		}
-	}
-	return false
+func isValidTopUpAmount(amount int64) bool {
+	return amount >= minTopUpAmount && amount <= maxTopUpAmount
 }
 
 func envOrDefault(name, fallback string) string {

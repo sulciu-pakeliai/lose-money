@@ -38,6 +38,8 @@ export type DiceRollSummary = {
 
 export type TopUpPolicy = {
     allowedAmounts: number[];
+    minAmount: number;
+    maxAmount: number;
     cooldownSeconds: number;
     availableAt?: string;
 };
