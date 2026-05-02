@@ -122,7 +122,7 @@ export function SettingsPanel({ isLoggedIn }: { isLoggedIn: boolean }) {
     };
 
     return (
-        <section className="w-full max-w-2xl space-y-4">
+        <section className="page-swap page-from-right w-full max-w-2xl space-y-4">
             <p className="text-xs uppercase tracking-[0.3em] text-slate-300/70">Responsible Gambling</p>
 
             {error && (
