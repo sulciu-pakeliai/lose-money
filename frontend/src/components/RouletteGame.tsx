@@ -58,6 +58,7 @@ export function RouletteGame({ balance, onSpin, onOpenRules, onOutcomeReveal }: 
             const midRad = (midAngle * Math.PI) / 180;
             const labelX = center + Math.cos(midRad) * labelRadius;
             const labelY = center + Math.sin(midRad) * labelRadius;
+            const labelRotation = midAngle + 90;
 
             return {
                 number,
@@ -65,6 +66,7 @@ export function RouletteGame({ balance, onSpin, onOpenRules, onOutcomeReveal }: 
                 path: `M ${center} ${center} L ${x1} ${y1} A ${wheelRadius} ${wheelRadius} 0 0 1 ${x2} ${y2} Z`,
                 labelX,
                 labelY,
+                labelRotation,
             };
         });
     }, []);
@@ -145,7 +147,7 @@ export function RouletteGame({ balance, onSpin, onOpenRules, onOutcomeReveal }: 
                 <div className="space-y-4 lg:w-7/12">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                         <div>
-                            <p className="text-xs uppercase tracking-[0.3em] text-rose-200/70">Roulette</p>
+                            <p className="game-eyebrow text-xs uppercase tracking-[0.3em] text-rose-200/70">Roulette</p>
                             <h2 className="mt-2 font-display text-4xl text-white">Roulette Royale</h2>
                         </div>
                         <button
@@ -219,6 +221,7 @@ export function RouletteGame({ balance, onSpin, onOpenRules, onOutcomeReveal }: 
                                                     className="roulette-segment-label"
                                                     textAnchor="middle"
                                                     dominantBaseline="middle"
+                                                    transform={`rotate(${segment.labelRotation} ${segment.labelX} ${segment.labelY})`}
                                                 >
                                                     {segment.number}
                                                 </text>

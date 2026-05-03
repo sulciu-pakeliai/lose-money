@@ -106,8 +106,8 @@ export function Header({
                         </div>
                     </div>
                     <div className="min-w-0">
-                        <p className="font-display text-xl leading-none tracking-wide text-white">LoseMoney</p>
-                        <p className="mt-1 text-[9px] uppercase tracking-[0.22em] text-cyan-100/60">Casino console</p>
+                        <p className="logo-wordmark font-display text-xl leading-none tracking-wide text-white">LoseMoney</p>
+                        <p className="logo-tagline mt-1 text-[9px] uppercase tracking-[0.22em] text-cyan-100/60">Casino console</p>
                     </div>
                 </div>
 

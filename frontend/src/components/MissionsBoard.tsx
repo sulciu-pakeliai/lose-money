@@ -113,7 +113,7 @@ export function MissionsBoard({ missions, onClaim }: MissionsBoardProps) {
                         <article key={mission.id} className={`flex h-full flex-col rounded-3xl border p-5 ${tone}`}>
                             <div className="flex items-start justify-between gap-4">
                                 <div>
-                                    <p className="text-[10px] uppercase tracking-[0.3em] text-slate-300/65">{mission.groupName}</p>
+                                    <p className="mission-game-name text-[10px] uppercase tracking-[0.3em] text-slate-300/65">{mission.groupName}</p>
                                     <h3 className="mt-2 font-display text-3xl text-white">{mission.title}</h3>
                                 </div>
                                 <div className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-slate-200/75">

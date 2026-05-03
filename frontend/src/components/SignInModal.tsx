@@ -41,7 +41,7 @@ export function SignInModal({ onBack, onSuccess }: SignInModalProps) {
         <div className="rules-backdrop fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 py-8 backdrop-blur-sm">
             <div className="w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(15,23,42,0.96),rgba(2,6,23,0.96))] shadow-[0_40px_120px_rgba(2,6,23,0.6)]">
                 <div className="border-b border-white/10 px-6 py-6">
-                    <p className={`text-xs uppercase tracking-[0.32em] ${mode === "signin" ? "text-cyan-200/70" : "text-amber-200/70"}`}>
+                    <p className={`auth-mode-label text-xs uppercase tracking-[0.32em] ${mode === "signin" ? "text-cyan-200/70" : "text-amber-200/70"}`}>
                         {mode === "signin" ? "Sign in" : "Create account"}
                     </p>
                     <h2 className="mt-2 font-display text-2xl text-white">
@@ -80,7 +80,7 @@ export function SignInModal({ onBack, onSuccess }: SignInModalProps) {
                             setError(null);
                             setMode(current => (current === "signin" ? "signup" : "signin"));
                         }}
-                        className={`justify-self-start text-xs font-semibold uppercase tracking-[0.2em] ${
+                        className={`auth-action-toggle justify-self-start text-xs font-semibold uppercase tracking-[0.2em] ${
                             mode === "signin" ? "text-cyan-200/80 hover:text-cyan-100" : "text-amber-200/80 hover:text-amber-100"
                         } transition`}
                     >

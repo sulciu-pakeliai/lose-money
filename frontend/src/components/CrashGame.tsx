@@ -501,7 +501,7 @@ export function CrashGame({ balance, game, onStart, onCashout, onStatusCheck, on
                             </div>
                         ) : (
                             <div>
-                                <p className="text-[10px] uppercase tracking-[0.28em] text-slate-400">Crash</p>
+                                <p className="game-eyebrow text-[10px] uppercase tracking-[0.28em] text-slate-400">Crash</p>
                                 <h2 className="mt-1 font-display text-3xl text-white">Single Player</h2>
                             </div>
                         )}

@@ -145,7 +145,7 @@ export function SlotGame({ balance, onSpin, onOpenRules, onOutcomeReveal }: Slot
             <div className="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
                 <aside className="rounded-3xl border border-white/10 bg-black/25 p-4">
                     <div>
-                        <p className="text-xs uppercase tracking-[0.3em] text-fuchsia-100/70">Slots</p>
+                        <p className="game-eyebrow text-xs uppercase tracking-[0.3em] text-fuchsia-100/70">Slots</p>
                         <h2 className="mt-2 font-display text-4xl text-white">Triple Reels</h2>
                     </div>
 

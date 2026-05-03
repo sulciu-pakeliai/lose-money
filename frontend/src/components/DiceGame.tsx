@@ -140,7 +140,7 @@ export function DiceGame({ balance, onRoll, onOpenRules, onOutcomeReveal }: Dice
             <div className="flex flex-col gap-6">
                 <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                     <div>
-                        <p className="text-xs uppercase tracking-[0.3em] text-amber-100/70">Dice</p>
+                        <p className="game-eyebrow text-xs uppercase tracking-[0.3em] text-amber-100/70">Dice</p>
                         <h2 className="mt-2 font-display text-4xl text-white">Lucky 7</h2>
                     </div>
                     <div className="flex flex-col gap-3 sm:items-end">
