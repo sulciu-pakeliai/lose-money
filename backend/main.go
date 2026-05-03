@@ -169,6 +169,7 @@ func main() {
 	mux.HandleFunc("POST /api/blackjack/start", app.handleBlackjackStart)
 	mux.HandleFunc("POST /api/blackjack/hit", app.handleBlackjackHit)
 	mux.HandleFunc("POST /api/blackjack/stand", app.handleBlackjackStand)
+	mux.HandleFunc("POST /api/blackjack/split", app.handleBlackjackSplit)
 	mux.HandleFunc("GET /api/profile", app.handleProfile)
 	mux.HandleFunc("POST /api/slots/spin", app.handleSlotSpin)
 	mux.HandleFunc("POST /api/crash/start", app.handleCrashStart)
@@ -345,6 +346,11 @@ CREATE TABLE IF NOT EXISTS blackjack_games (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     completed_at TIMESTAMPTZ
 );
+
+ALTER TABLE blackjack_games ADD COLUMN IF NOT EXISTS split_cards  JSONB NOT NULL DEFAULT '[]';
+ALTER TABLE blackjack_games ADD COLUMN IF NOT EXISTS split_bet    BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE blackjack_games ADD COLUMN IF NOT EXISTS active_hand  INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE blackjack_games ADD COLUMN IF NOT EXISTS split_status TEXT NOT NULL DEFAULT '';
 
 CREATE UNIQUE INDEX IF NOT EXISTS blackjack_active_session_idx
     ON blackjack_games(session_id)

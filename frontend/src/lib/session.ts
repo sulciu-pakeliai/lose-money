@@ -54,13 +54,19 @@ export type BlackjackGameState = {
     betAmount: number;
     playerCards: BlackjackCard[];
     dealerCards: BlackjackCard[];
+    splitCards?: BlackjackCard[];
+    splitBet?: number;
+    activeHand: number;
     dealerHiddenCount: number;
     playerTotal: number;
     dealerTotal: number;
+    splitTotal?: number;
+    splitStatus?: string;
     status: string;
     message: string;
     canHit: boolean;
     canStand: boolean;
+    canSplit: boolean;
     isComplete: boolean;
     completedAt?: string;
 };
@@ -377,6 +383,12 @@ export async function hitBlackjack(): Promise<BlackjackActionResult> {
 
 export async function standBlackjack(): Promise<BlackjackActionResult> {
     return apiFetch<BlackjackActionResult>("/api/blackjack/stand", {
+        method: "POST",
+    });
+}
+
+export async function splitBlackjack(): Promise<BlackjackActionResult> {
+    return apiFetch<BlackjackActionResult>("/api/blackjack/split", {
         method: "POST",
     });
 }

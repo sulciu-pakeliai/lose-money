@@ -19,6 +19,7 @@ import {
     startCrashRound,
     standBlackjack,
     startBlackjack,
+    splitBlackjack,
     submitCoinFlip,
     submitSlotSpin,
     type Achievement,
@@ -436,6 +437,12 @@ export function App() {
         return next;
     };
 
+    const handleBlackjackSplit = async () => {
+        const next = await splitBlackjack();
+        applyBlackjack(next);
+        return next;
+    };
+
     const handleSlotSpin = async (amount: number) => {
         const next = await submitSlotSpin(amount);
         applySlotSpin(next);
@@ -590,6 +597,7 @@ export function App() {
                             onStart={handleBlackjackStart}
                             onHit={handleBlackjackHit}
                             onStand={handleBlackjackStand}
+                            onSplit={handleBlackjackSplit}
                             onOpenRules={() => openRules("blackjack")}
                         />
                     )}

@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import type { BlackjackActionResult, BlackjackCard, BlackjackGameState } from "../lib/session";
+import type {
+    BlackjackActionResult,
+    BlackjackCard,
+    BlackjackGameState,
+} from "../lib/session";
 
 type BlackjackGameProps = {
     balance: number;
@@ -7,6 +11,7 @@ type BlackjackGameProps = {
     onStart: (amount: number) => Promise<BlackjackActionResult>;
     onHit: () => Promise<BlackjackActionResult>;
     onStand: () => Promise<BlackjackActionResult>;
+    onSplit: () => Promise<BlackjackActionResult>;
     onOpenRules: () => void;
 };
 
@@ -39,17 +44,23 @@ const resultTone: Record<string, string> = {
 };
 
 function formatBalance(value: number) {
-    return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value);
+    return new Intl.NumberFormat("en-US", {
+        maximumFractionDigits: 0,
+    }).format(value);
 }
 
-function CardFace({ card, hidden = false }: { card?: BlackjackCard; hidden?: boolean }) {
+function CardFace({
+    card,
+    hidden = false,
+}: {
+    card?: BlackjackCard;
+    hidden?: boolean;
+}) {
     if (hidden || !card) {
         return (
             <div className="blackjack-card blackjack-card-hidden">
                 <div className="blackjack-card-surface">
-                    <div className="blackjack-card-backmark">
-                        LM
-                    </div>
+                    <div className="blackjack-card-backmark">LM</div>
                 </div>
             </div>
         );
@@ -58,27 +69,123 @@ function CardFace({ card, hidden = false }: { card?: BlackjackCard; hidden?: boo
     return (
         <div className="blackjack-card">
             <div className="blackjack-card-surface">
-                <div className={`blackjack-card-center ${suitAccent[card.suit]}`}>
+                <div
+                    className={`blackjack-card-center ${suitAccent[card.suit]}`}
+                >
                     <span className="blackjack-card-rank">{card.rank}</span>
-                    <span className="blackjack-card-suit">{suitLabel[card.suit]}</span>
+                    <span className="blackjack-card-suit">
+                        {suitLabel[card.suit]}
+                    </span>
                 </div>
             </div>
         </div>
     );
 }
 
-export function BlackjackGame({ balance, game, onStart, onHit, onStand, onOpenRules }: BlackjackGameProps) {
+function HandDisplay({
+    label,
+    cards,
+    hiddenCount = 0,
+    total,
+    isActive = false,
+    splitStatus,
+}: {
+    label: string;
+    cards: BlackjackCard[];
+    hiddenCount?: number;
+    total: number;
+    isActive?: boolean;
+    splitStatus?: string;
+}) {
+    const totalLabel =
+        hiddenCount > 0 ? `${total} showing` : String(total);
+
+    return (
+        <div
+            className={`rounded-2xl p-3 transition-colors ${
+                isActive
+                    ? "ring-2 ring-cyan-400/60 bg-cyan-400/5"
+                    : "bg-transparent"
+            }`}
+        >
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <p className="text-xs uppercase tracking-[0.3em] text-emerald-100/60">
+                        {label}
+                    </p>
+                    {isActive && (
+                        <span className="rounded-full bg-cyan-400/20 px-2 py-0.5 text-[10px] uppercase tracking-widest text-cyan-300">
+                            Active
+                        </span>
+                    )}
+                    {splitStatus && splitStatus !== "" && (
+                        <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-widest text-white/50">
+                            {splitStatus === "player_bust"
+                                ? "Bust"
+                                : splitStatus}
+                        </span>
+                    )}
+                </div>
+                <p className="text-xs uppercase tracking-[0.24em] text-emerald-50/80">
+                    Total: {totalLabel}
+                </p>
+            </div>
+            <div className="card-fan mt-4">
+                {cards.length === 0 && (
+                    <div className="flex h-28 w-20 items-center justify-center rounded-2xl border border-dashed border-white/15 text-xs uppercase tracking-[0.3em] text-emerald-50/50">
+                        Deal
+                    </div>
+                )}
+                {cards.map((card, index) => (
+                    <div
+                        key={`${label}-${card.suit}-${card.rank}-${index}`}
+                        style={{
+                            ["--card-delay" as string]: `${index * 90}ms`,
+                        }}
+                    >
+                        <CardFace card={card} />
+                    </div>
+                ))}
+                {Array.from({ length: hiddenCount }).map((_, index) => (
+                    <div
+                        key={`${label}-hidden-${index}`}
+                        style={{
+                            ["--card-delay" as string]: `${
+                                (cards.length + index) * 90
+                            }ms`,
+                        }}
+                    >
+                        <CardFace hidden />
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+export function BlackjackGame({
+    balance,
+    game,
+    onStart,
+    onHit,
+    onStand,
+    onSplit,
+    onOpenRules,
+}: BlackjackGameProps) {
     const [bet, setBet] = useState<number>(25);
     const [customBet, setCustomBet] = useState("25");
     const [isBusy, setIsBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [resultFlash, setResultFlash] = useState<"win" | "loss" | "push" | "idle">("idle");
+    const [resultFlash, setResultFlash] = useState<
+        "win" | "loss" | "push" | "idle"
+    >("idle");
     const previousStatusRef = useRef<string | null>(null);
 
     useEffect(() => {
         if (bet > balance && balance > 0) {
-            setBet(Math.min(balance, betOptions[0] ?? balance));
-            setCustomBet(String(Math.min(balance, betOptions[0] ?? balance)));
+            const next = Math.min(balance, betOptions[0] ?? balance);
+            setBet(next);
+            setCustomBet(String(next));
         }
     }, [balance, bet]);
 
@@ -86,16 +193,27 @@ export function BlackjackGame({ balance, game, onStart, onHit, onStand, onOpenRu
         const currentStatus = game?.status ?? null;
         const previousStatus = previousStatusRef.current;
 
-        if (currentStatus && currentStatus !== previousStatus && currentStatus !== "active") {
+        if (
+            currentStatus &&
+            currentStatus !== previousStatus &&
+            currentStatus !== "active"
+        ) {
             if (currentStatus === "push") {
                 setResultFlash("push");
-            } else if (currentStatus === "blackjack" || currentStatus === "player_win" || currentStatus === "dealer_bust") {
+            } else if (
+                currentStatus === "blackjack" ||
+                currentStatus === "player_win" ||
+                currentStatus === "dealer_bust"
+            ) {
                 setResultFlash("win");
             } else {
                 setResultFlash("loss");
             }
 
-            const timeout = window.setTimeout(() => setResultFlash("idle"), 900);
+            const timeout = window.setTimeout(
+                () => setResultFlash("idle"),
+                900,
+            );
             previousStatusRef.current = currentStatus;
             return () => window.clearTimeout(timeout);
         }
@@ -105,48 +223,56 @@ export function BlackjackGame({ balance, game, onStart, onHit, onStand, onOpenRu
 
     const parsedCustomBet = Number(customBet);
     const isCustomBetValid =
-        Number.isFinite(parsedCustomBet) && parsedCustomBet >= minBet && parsedCustomBet <= maxBet;
+        Number.isFinite(parsedCustomBet) &&
+        parsedCustomBet >= minBet &&
+        parsedCustomBet <= maxBet;
 
     const dealerCards = game?.dealerCards ?? [];
     const hiddenDealerCards = game?.dealerHiddenCount ?? 0;
     const playerCards = game?.playerCards ?? [];
+    const splitCards = game?.splitCards ?? [];
+    const hasSplit = splitCards.length > 0;
+    const activeHand = game?.activeHand ?? 0;
     const canStart = !game || game.isComplete;
+
     const statusClass =
         resultFlash === "win"
             ? "table-status table-status-win"
             : resultFlash === "loss"
-                ? "table-status table-status-loss"
-                : resultFlash === "push"
-                    ? "table-status table-status-push"
-                    : "table-status";
+              ? "table-status table-status-loss"
+              : resultFlash === "push"
+                ? "table-status table-status-push"
+                : "table-status";
 
     const handleStart = async () => {
         if (isBusy || bet < 1 || bet > balance) return;
-
         setError(null);
         setIsBusy(true);
         try {
             await onStart(bet);
-        } catch (requestError) {
-            setError(requestError instanceof Error ? requestError.message : "Unable to start blackjack hand");
+        } catch (e) {
+            setError(
+                e instanceof Error
+                    ? e.message
+                    : "Unable to start blackjack hand",
+            );
         } finally {
             setIsBusy(false);
         }
     };
 
-    const handleAction = async (action: "hit" | "stand") => {
+    const handleAction = async (action: "hit" | "stand" | "split") => {
         if (isBusy) return;
-
         setError(null);
         setIsBusy(true);
         try {
-            if (action === "hit") {
-                await onHit();
-            } else {
-                await onStand();
-            }
-        } catch (requestError) {
-            setError(requestError instanceof Error ? requestError.message : "Blackjack action failed");
+            if (action === "hit") await onHit();
+            else if (action === "stand") await onStand();
+            else await onSplit();
+        } catch (e) {
+            setError(
+                e instanceof Error ? e.message : "Blackjack action failed",
+            );
         } finally {
             setIsBusy(false);
         }
@@ -155,10 +281,15 @@ export function BlackjackGame({ balance, game, onStart, onHit, onStand, onOpenRu
     return (
         <section className="game-shell game-shell-blackjack blackjack-table page-swap page-from-right w-full max-w-4xl overflow-hidden rounded-4xl border border-emerald-300/15 bg-[radial-gradient(circle_at_top,#0f5132,#052e16_42%,#03170f_100%)] p-6 shadow-[0_40px_120px_rgba(2,6,23,0.45)]">
             <div className="flex flex-col gap-6">
+                {/* Header */}
                 <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                     <div>
-                        <p className="text-xs uppercase tracking-[0.3em] text-emerald-100/70">Blackjack</p>
-                        <h2 className="mt-2 font-display text-4xl text-white">High Table 21</h2>
+                        <p className="text-xs uppercase tracking-[0.3em] text-emerald-100/70">
+                            Blackjack
+                        </p>
+                        <h2 className="mt-2 font-display text-4xl text-white">
+                            High Table 21
+                        </h2>
                     </div>
                     <div className="flex flex-col gap-3 sm:items-end">
                         <button
@@ -169,12 +300,23 @@ export function BlackjackGame({ balance, game, onStart, onHit, onStand, onOpenRu
                             Rules
                         </button>
                         <div className="rounded-2xl border border-white/10 bg-black/20 px-5 py-4">
-                            <p className="text-xs uppercase tracking-[0.28em] text-emerald-100/60">Active Wager</p>
-                            <p className="mt-2 font-display text-3xl text-white">₵ {formatBalance(game?.betAmount ?? bet)}</p>
+                            <p className="text-xs uppercase tracking-[0.28em] text-emerald-100/60">
+                                Active Wager
+                            </p>
+                            <p className="mt-2 font-display text-3xl text-white">
+                                ₵{" "}
+                                {formatBalance(
+                                    hasSplit
+                                        ? (game?.betAmount ?? 0) +
+                                              (game?.splitBet ?? 0)
+                                        : (game?.betAmount ?? bet),
+                                )}
+                            </p>
                         </div>
                     </div>
                 </div>
 
+                {/* Status bar */}
                 <div
                     className={`rounded-3xl border px-5 py-4 text-sm ${statusClass} ${resultTone[game?.status ?? "active"] ?? resultTone.active}`}
                 >
@@ -182,74 +324,56 @@ export function BlackjackGame({ balance, game, onStart, onHit, onStand, onOpenRu
                 </div>
 
                 <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+                    {/* Card table */}
                     <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
-                        <div className="space-y-6">
-                            <div>
-                                <div className="flex items-center justify-between">
-                                    <p className="text-xs uppercase tracking-[0.3em] text-emerald-100/60">Dealer</p>
-                                    <p className="text-xs uppercase tracking-[0.24em] text-emerald-50/80">
-                                        Total: {game?.dealerTotal ?? 0}
-                                        {hiddenDealerCards > 0 ? " showing" : ""}
-                                    </p>
-                                </div>
-                                <div className="card-fan mt-4">
-                                    {dealerCards.length === 0 && (
-                                        <div className="flex h-28 w-20 items-center justify-center rounded-2xl border border-dashed border-white/15 text-xs uppercase tracking-[0.3em] text-emerald-50/50">
-                                            Wait
-                                        </div>
-                                    )}
-                                    {dealerCards.map((card, index) => (
-                                        <div
-                                            key={`dealer-${card.suit}-${card.rank}-${index}`}
-                                            style={{ ["--card-delay" as string]: `${index * 90}ms` }}
-                                        >
-                                            <CardFace card={card} />
-                                        </div>
-                                    ))}
-                                    {Array.from({ length: hiddenDealerCards }).map((_, index) => (
-                                        <div
-                                            key={`dealer-hidden-${index}`}
-                                            style={{ ["--card-delay" as string]: `${(dealerCards.length + index) * 90}ms` }}
-                                        >
-                                            <CardFace hidden />
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
+                        <div className="space-y-4">
+                            {/* Dealer */}
+                            <HandDisplay
+                                label="Dealer"
+                                cards={dealerCards}
+                                hiddenCount={hiddenDealerCards}
+                                total={game?.dealerTotal ?? 0}
+                            />
 
-                            <div>
-                                <div className="flex items-center justify-between">
-                                    <p className="text-xs uppercase tracking-[0.3em] text-emerald-100/60">Player</p>
-                                    <p className="text-xs uppercase tracking-[0.24em] text-emerald-50/80">
-                                        Total: {game?.playerTotal ?? 0}
-                                    </p>
-                                </div>
-                                <div className="card-fan mt-4">
-                                    {playerCards.length === 0 && (
-                                        <div className="flex h-28 w-20 items-center justify-center rounded-2xl border border-dashed border-white/15 text-xs uppercase tracking-[0.3em] text-emerald-50/50">
-                                            Deal
-                                        </div>
-                                    )}
-                                    {playerCards.map((card, index) => (
-                                        <div
-                                            key={`player-${card.suit}-${card.rank}-${index}`}
-                                            style={{ ["--card-delay" as string]: `${index * 90}ms` }}
-                                        >
-                                            <CardFace card={card} />
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
+                            <div className="border-t border-white/10" />
+
+                            {/* Player hands */}
+                            <HandDisplay
+                                label={hasSplit ? "Main hand" : "Player"}
+                                cards={playerCards}
+                                total={game?.playerTotal ?? 0}
+                                isActive={
+                                    !canStart && hasSplit && activeHand === 0
+                                }
+                            />
+
+                            {hasSplit && (
+                                <>
+                                    <div className="border-t border-white/10" />
+                                    <HandDisplay
+                                        label="Split hand"
+                                        cards={splitCards}
+                                        total={game?.splitTotal ?? 0}
+                                        isActive={
+                                            !canStart && activeHand === 1
+                                        }
+                                        splitStatus={game?.splitStatus}
+                                    />
+                                </>
+                            )}
                         </div>
                     </div>
 
+                    {/* Controls */}
                     <div className="rounded-3xl border border-white/10 bg-black/25 p-5">
-                        <p className="text-xs uppercase tracking-[0.3em] text-emerald-100/60">Controls</p>
+                        <p className="text-xs uppercase tracking-[0.3em] text-emerald-100/60">
+                            Controls
+                        </p>
 
                         {canStart ? (
                             <>
                                 <div className="mt-5 grid grid-cols-3 gap-3">
-                                    {betOptions.map(amount => (
+                                    {betOptions.map((amount) => (
                                         <button
                                             key={amount}
                                             onClick={() => {
@@ -257,11 +381,14 @@ export function BlackjackGame({ balance, game, onStart, onHit, onStand, onOpenRu
                                                 setCustomBet(String(amount));
                                                 setError(null);
                                             }}
-                                            disabled={isBusy || amount > balance}
-                                            className={`arcade-button rounded-2xl border px-3 py-3 text-xs font-semibold uppercase tracking-[0.2em] transition ${bet === amount
+                                            disabled={
+                                                isBusy || amount > balance
+                                            }
+                                            className={`arcade-button rounded-2xl border px-3 py-3 text-xs font-semibold uppercase tracking-[0.2em] transition ${
+                                                bet === amount
                                                     ? "border-emerald-300/60 bg-emerald-300/10 text-emerald-100"
                                                     : "border-white/10 bg-white/5 text-emerald-50/70 hover:border-white/20"
-                                                } disabled:cursor-not-allowed disabled:opacity-50`}
+                                            } disabled:cursor-not-allowed disabled:opacity-50`}
                                             type="button"
                                         >
                                             {amount}
@@ -277,12 +404,16 @@ export function BlackjackGame({ balance, game, onStart, onHit, onStand, onOpenRu
                                         max={maxBet}
                                         step="1"
                                         value={customBet}
-                                        onChange={event => {
-                                            const value = event.target.value;
-                                            setCustomBet(value);
-                                            const parsed = Number(value);
-                                            if (Number.isFinite(parsed) && parsed >= minBet && parsed <= maxBet) {
-                                                setBet(parsed);
+                                        onChange={(e) => {
+                                            const v = e.target.value;
+                                            setCustomBet(v);
+                                            const n = Number(v);
+                                            if (
+                                                Number.isFinite(n) &&
+                                                n >= minBet &&
+                                                n <= maxBet
+                                            ) {
+                                                setBet(n);
                                                 setError(null);
                                             }
                                         }}
@@ -306,11 +437,15 @@ export function BlackjackGame({ balance, game, onStart, onHit, onStand, onOpenRu
 
                                 <button
                                     onClick={() => void handleStart()}
-                                    disabled={isBusy || bet > balance || bet < 1}
+                                    disabled={
+                                        isBusy || bet > balance || bet < 1
+                                    }
                                     className="arcade-button mt-5 w-full rounded-2xl bg-emerald-300 px-6 py-4 text-xs font-semibold uppercase tracking-[0.22em] text-slate-950 transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:opacity-60"
                                     type="button"
                                 >
-                                    {game?.isComplete ? "Deal New Hand" : "Deal Cards"}
+                                    {game?.isComplete
+                                        ? "Deal New Hand"
+                                        : "Deal Cards"}
                                 </button>
                             </>
                         ) : (
@@ -331,18 +466,41 @@ export function BlackjackGame({ balance, game, onStart, onHit, onStand, onOpenRu
                                 >
                                     Stand
                                 </button>
+                                {game?.canSplit && (
+                                    <button
+                                        onClick={() =>
+                                            void handleAction("split")
+                                        }
+                                        disabled={
+                                            isBusy ||
+                                            (game?.betAmount ?? 0) > balance
+                                        }
+                                        className="arcade-button rounded-2xl border border-violet-300/40 bg-violet-300/10 px-6 py-4 text-xs font-semibold uppercase tracking-[0.22em] text-violet-100 transition hover:bg-violet-300/20 disabled:cursor-not-allowed disabled:opacity-60"
+                                        type="button"
+                                    >
+                                        Split (₵{" "}
+                                        {formatBalance(game?.betAmount ?? 0)})
+                                    </button>
+                                )}
                             </div>
                         )}
 
                         {bet > balance && (
-                            <p className="mt-4 text-xs uppercase tracking-[0.24em] text-rose-200">Not enough balance</p>
+                            <p className="mt-4 text-xs uppercase tracking-[0.24em] text-rose-200">
+                                Not enough balance
+                            </p>
                         )}
-
-                        {error && <p className="mt-4 text-xs uppercase tracking-[0.24em] text-rose-200">{error}</p>}
+                        {error && (
+                            <p className="mt-4 text-xs uppercase tracking-[0.24em] text-rose-200">
+                                {error}
+                            </p>
+                        )}
 
                         <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4 text-xs uppercase tracking-[0.22em] text-emerald-50/70">
                             Balance available
-                            <div className="mt-2 font-display text-2xl tracking-normal text-white">₵ {formatBalance(balance)}</div>
+                            <div className="mt-2 font-display text-2xl tracking-normal text-white">
+                                ₵ {formatBalance(balance)}
+                            </div>
                         </div>
                     </div>
                 </div>
