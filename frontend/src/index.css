@@ -717,17 +717,17 @@ input[type="number"] {
 }
 
 .roulette-center-overlay {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 10rem;
-  height: 10rem;
-  transform: translate(-50%, -50%);
+  position: relative;
+  width: fit-content;
+  margin: 0 auto 1rem;
+  padding: 0.75rem 0.9rem;
   border-radius: 9999px;
   display: grid;
   place-items: center;
+  gap: 0.2rem;
   text-align: center;
   pointer-events: none;
+  z-index: 20;
 }
 
 .roulette-pointer {

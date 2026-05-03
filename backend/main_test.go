@@ -79,8 +79,14 @@ func TestNormalizeRouletteBetTypeAndChoice(t *testing.T) {
 	if got := normalizeRouletteBetType("RED"); got != rouletteBetTypeColor {
 		t.Fatalf("got %q, want %q", got, rouletteBetTypeColor)
 	}
+	if got := normalizeRouletteBetType("split"); got != rouletteBetTypeSplit {
+		t.Fatalf("got %q, want %q", got, rouletteBetTypeSplit)
+	}
 	if got := normalizeRouletteChoice("17"); got != "17" {
 		t.Fatalf("got %q, want %q", got, "17")
+	}
+	if got := normalizeRouletteChoice("17,18"); got != "17,18" {
+		t.Fatalf("got %q, want %q", got, "17,18")
 	}
 	if got := normalizeRouletteChoice("Black"); got != rouletteColorBlack {
 		t.Fatalf("got %q, want %q", got, rouletteColorBlack)
@@ -95,6 +101,9 @@ func TestResolveRouletteSpin(t *testing.T) {
 
 	if got := resolveRouletteSpin(rouletteBetTypeNumber, "7", 7, rouletteColorRed); !got.Won || got.Outcome != "win" || got.ProfitMultiplier != 35 {
 		t.Fatalf("number bet should win, got %+v", got)
+	}
+	if got := resolveRouletteSpin(rouletteBetTypeSplit, "7,8", 8, rouletteColorBlack); !got.Won || got.Outcome != "win" || got.ProfitMultiplier != 17 {
+		t.Fatalf("split bet should win, got %+v", got)
 	}
 	if got := resolveRouletteSpin(rouletteBetTypeColor, "black", 2, rouletteColorBlack); !got.Won || got.Outcome != "win" || got.ProfitMultiplier != 1 {
 		t.Fatalf("black bet should win, got %+v", got)

@@ -146,7 +146,7 @@ export type DiceRollResult = {
     notifications: AppNotification[];
 };
 
-export type RouletteBetType = "number" | "color";
+export type RouletteBetType = "number" | "split" | "color";
 
 export type RouletteSpinResult = {
     number: number;
