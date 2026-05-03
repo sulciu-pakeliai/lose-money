@@ -12,6 +12,7 @@ import (
 
 const (
 	rouletteBetTypeNumber = "number"
+	rouletteBetTypeSplit  = "split"
 	rouletteBetTypeColor  = "color"
 	rouletteColorRed      = "red"
 	rouletteColorBlack    = "black"
@@ -98,6 +99,18 @@ func (a *application) handleRoulette(w http.ResponseWriter, r *http.Request) {
 	case req.BetType == rouletteBetTypeNumber:
 		if _, err := strconv.Atoi(req.Choice); err != nil {
 			writeError(w, http.StatusBadRequest, "choice must be a number between 0 and 36 for number bets")
+			return
+		}
+	case req.BetType == rouletteBetTypeSplit:
+		parts := strings.Split(req.Choice, ",")
+		if len(parts) != 2 {
+			writeError(w, http.StatusBadRequest, "choice must be two distinct numbers for split bets")
+			return
+		}
+		left, errLeft := strconv.Atoi(parts[0])
+		right, errRight := strconv.Atoi(parts[1])
+		if errLeft != nil || errRight != nil || left < 0 || left > 36 || right < 0 || right > 36 || left == right {
+			writeError(w, http.StatusBadRequest, "choice must be two distinct numbers between 0 and 36 for split bets")
 			return
 		}
 	case req.BetType == rouletteBetTypeColor && req.Choice != rouletteColorRed && req.Choice != rouletteColorBlack:
@@ -264,6 +277,8 @@ func normalizeRouletteBetType(raw string) string {
 	switch strings.ToLower(strings.TrimSpace(raw)) {
 	case rouletteBetTypeNumber, "num", "single", "specific", "specific number":
 		return rouletteBetTypeNumber
+	case rouletteBetTypeSplit, "two", "pair", "two numbers", "exact pair":
+		return rouletteBetTypeSplit
 	case rouletteBetTypeColor, "colour", "red", "black":
 		return rouletteBetTypeColor
 	default:
@@ -276,6 +291,18 @@ func normalizeRouletteChoice(raw string) string {
 	switch value {
 	case rouletteColorRed, rouletteColorBlack:
 		return value
+	}
+
+	if strings.ContainsAny(value, ",/- ") {
+		normalized := strings.NewReplacer(",", " ", "-", " ", "/", " ").Replace(value)
+		parts := strings.Fields(normalized)
+		if len(parts) == 2 {
+			numberA, errA := strconv.Atoi(parts[0])
+			numberB, errB := strconv.Atoi(parts[1])
+			if errA == nil && errB == nil && numberA >= 0 && numberA <= 36 && numberB >= 0 && numberB <= 36 && numberA != numberB {
+				return fmt.Sprintf("%d,%d", numberA, numberB)
+			}
+		}
 	}
 
 	number, err := strconv.Atoi(value)
@@ -309,6 +336,24 @@ func resolveRouletteSpin(betType string, choice string, number int, color string
 			Outcome:          map[bool]string{true: "win", false: "loss"}[won],
 			Status:           status,
 			ProfitMultiplier: 35,
+			Won:              won,
+		}
+	case rouletteBetTypeSplit:
+		parts := strings.Split(choice, ",")
+		left, right := -1, -1
+		fmt.Sscanf(parts[0], "%d", &left)
+		fmt.Sscanf(parts[1], "%d", &right)
+		won := left == number || right == number
+		status := "settled"
+		if won {
+			status = "split_hit"
+		}
+		return rouletteResolution{
+			ChoiceLabel:      fmt.Sprintf("Split %d/%d", left, right),
+			ResultLabel:      resultLabel,
+			Outcome:          map[bool]string{true: "win", false: "loss"}[won],
+			Status:           status,
+			ProfitMultiplier: 17,
 			Won:              won,
 		}
 	case rouletteBetTypeColor:

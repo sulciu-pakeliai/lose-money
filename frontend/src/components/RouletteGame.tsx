@@ -24,6 +24,8 @@ type RouletteGameProps = {
 export function RouletteGame({ balance, onSpin, onOpenRules, onOutcomeReveal }: RouletteGameProps) {
     const [betType, setBetType] = useState<RouletteBetType>("number");
     const [numberChoice, setNumberChoice] = useState<string>("17");
+    const [splitChoiceLeft, setSplitChoiceLeft] = useState<string>("17");
+    const [splitChoiceRight, setSplitChoiceRight] = useState<string>("18");
     const [colorChoice, setColorChoice] = useState<"red" | "black">("red");
     const [bet, setBet] = useState<number>(25);
     const [customBet, setCustomBet] = useState<string>("25");
@@ -34,7 +36,12 @@ export function RouletteGame({ balance, onSpin, onOpenRules, onOutcomeReveal }: 
     const [spinResult, setSpinResult] = useState<RouletteResult | null>(null);
     const [rotation, setRotation] = useState(0);
 
-    const choice = betType === "number" ? numberChoice : colorChoice;
+    const choice =
+        betType === "number"
+            ? numberChoice
+            : betType === "split"
+            ? `${splitChoiceLeft},${splitChoiceRight}`
+            : colorChoice;
     const parsedCustomBet = Number(customBet);
     const isCustomBetValid = Number.isFinite(parsedCustomBet) && parsedCustomBet >= minBet && parsedCustomBet <= maxBet;
     const canAfford = bet <= balance;
@@ -192,6 +199,11 @@ export function RouletteGame({ balance, onSpin, onOpenRules, onOutcomeReveal }: 
                     </div>
 
                     <div className="rounded-3xl border border-white/10 bg-black/25 p-5">
+                        <div className="roulette-center-overlay">
+                            <div className="text-xs uppercase tracking-[0.3em] text-slate-400">Win</div>
+                            <div className="mt-1 text-5xl font-display text-white">{revealOutcome ? selectedNumber : "--"}</div>
+                            <div className="mt-1 text-xs uppercase tracking-[0.28em] text-slate-300">{revealOutcome ? formatRouletteLabel(selectedColor) : "Spinning..."}</div>
+                        </div>
                         <div className="roulette-board">
                             <div className="roulette-pointer" />
                             <div className="roulette-wheel">
@@ -230,11 +242,6 @@ export function RouletteGame({ balance, onSpin, onOpenRules, onOutcomeReveal }: 
                                     </g>
                                     <circle cx="180" cy="180" r="90" className="roulette-center-plate" />
                                 </svg>
-                                <div className="roulette-center-overlay">
-                                    <div className="text-xs uppercase tracking-[0.3em] text-slate-400">Win</div>
-                                    <div className="mt-1 text-5xl font-display text-white">{revealOutcome ? selectedNumber : "--"}</div>
-                                    <div className="mt-1 text-xs uppercase tracking-[0.28em] text-slate-300">{revealOutcome ? formatRouletteLabel(selectedColor) : "Spinning..."}</div>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -248,7 +255,7 @@ export function RouletteGame({ balance, onSpin, onOpenRules, onOutcomeReveal }: 
                             <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
                                     <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Call</div>
-                                    <div className="mt-1 font-display text-2xl text-white">{formatRouletteLabel(spinResult.spin.choice)}</div>
+                                    <div className="mt-1 font-display text-2xl text-white">{formatRouletteChoice(spinResult.spin.choice)}</div>
                                 </div>
                                 <div>
                                     <div className="text-xs uppercase tracking-[0.24em] text-slate-400">Payout</div>
@@ -269,7 +276,7 @@ export function RouletteGame({ balance, onSpin, onOpenRules, onOutcomeReveal }: 
                                 <div className="mt-2 text-3xl font-display text-white">₵ {formatCredits(balance)}</div>
                             </div>
                             <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80">
-                                {betType === "number" ? "Number Bet" : "Color Bet"}
+                                {betType === "number" ? "Number Bet" : betType === "split" ? "Split Bet" : "Color Bet"}
                             </div>
                         </div>
 
@@ -277,7 +284,7 @@ export function RouletteGame({ balance, onSpin, onOpenRules, onOutcomeReveal }: 
                             <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
                                 <p className="text-xs uppercase tracking-[0.3em] text-slate-300/70">Bet type</p>
                                 <div className="mt-3 grid grid-cols-2 gap-3">
-                                    {(["number", "color"] as RouletteBetType[]).map(type => (
+                                    {(["number", "split", "color"] as RouletteBetType[]).map(type => (
                                         <button
                                             key={type}
                                             type="button"
@@ -292,7 +299,11 @@ export function RouletteGame({ balance, onSpin, onOpenRules, onOutcomeReveal }: 
                                                     : "border-white/10 bg-white/5 text-slate-200/70 hover:border-white/20"
                                             }`}
                                         >
-                                            {type === "number" ? "Specific Number" : "Red or Black"}
+                                            {type === "number"
+                                                ? "Specific Number"
+                                                : type === "split"
+                                                ? "Split Pair"
+                                                : "Red or Black"}
                                         </button>
                                     ))}
                                 </div>
@@ -318,6 +329,47 @@ export function RouletteGame({ balance, onSpin, onOpenRules, onOutcomeReveal }: 
                                         <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80">
                                             0-36
                                         </div>
+                                    </div>
+                                </div>
+                            ) : betType === "split" ? (
+                                <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
+                                    <p className="text-xs uppercase tracking-[0.3em] text-slate-300/70">Split Pair</p>
+                                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                        <div className="flex items-center gap-3">
+                                            <input
+                                                type="number"
+                                                min={0}
+                                                max={36}
+                                                value={splitChoiceLeft}
+                                                onChange={event => {
+                                                    const value = event.target.value;
+                                                    setSplitChoiceLeft(value);
+                                                    setError(null);
+                                                    setSpinResult(null);
+                                                }}
+                                                className="w-full rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-lg text-white outline-none transition focus:border-amber-300/60"
+                                            />
+                                            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80">First</div>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <input
+                                                type="number"
+                                                min={0}
+                                                max={36}
+                                                value={splitChoiceRight}
+                                                onChange={event => {
+                                                    const value = event.target.value;
+                                                    setSplitChoiceRight(value);
+                                                    setError(null);
+                                                    setSpinResult(null);
+                                                }}
+                                                className="w-full rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-lg text-white outline-none transition focus:border-amber-300/60"
+                                            />
+                                            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/80">Second</div>
+                                        </div>
+                                    </div>
+                                    <div className="mt-4 text-xs uppercase tracking-[0.24em] text-slate-400">
+                                        Pick two distinct numbers between 0 and 36.
                                     </div>
                                 </div>
                             ) : (
@@ -438,4 +490,11 @@ function formatRouletteLabel(value: string) {
     }
 
     return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+}
+
+function formatRouletteChoice(value: string) {
+    if (value.includes(",")) {
+        return value.split(",").join("/");
+    }
+    return formatRouletteLabel(value);
 }
