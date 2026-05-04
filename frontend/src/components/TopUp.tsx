@@ -16,12 +16,6 @@ export function TopUp({ policy, onConfirm, onCancel }: TopUpProps) {
     const [isUsingCustomAmount, setIsUsingCustomAmount] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [now, setNow] = useState(() => Date.now());
-
-    useEffect(() => {
-        const timer = window.setInterval(() => setNow(Date.now()), 1000);
-        return () => window.clearInterval(timer);
-    }, []);
 
     useEffect(() => {
         setSelectedAmount(policy.allowedAmounts[0] ?? policy.minAmount);
@@ -29,15 +23,12 @@ export function TopUp({ policy, onConfirm, onCancel }: TopUpProps) {
         setIsUsingCustomAmount(false);
     }, [policy.allowedAmounts, policy.minAmount]);
 
-    const availableAtMs = policy.availableAt ? new Date(policy.availableAt).getTime() : 0;
-    const cooldownRemainingMs = Math.max(0, availableAtMs - now);
-    const cooldownRemainingSeconds = Math.ceil(cooldownRemainingMs / 1000);
     const parsedCustomAmount = Number.parseInt(customAmount, 10);
     const amountToClaim = isUsingCustomAmount
         ? (Number.isFinite(parsedCustomAmount) ? parsedCustomAmount : 0)
         : selectedAmount;
     const hasValidAmount = amountToClaim >= policy.minAmount && amountToClaim <= policy.maxAmount;
-    const canClaim = hasValidAmount && cooldownRemainingMs === 0 && !isSubmitting;
+    const canClaim = hasValidAmount && !isSubmitting;
 
     const handleSubmit = async () => {
         if (!canClaim) return;
@@ -67,16 +58,8 @@ export function TopUp({ policy, onConfirm, onCancel }: TopUpProps) {
                     </div>
                 </div>
 
-                <div
-                    className={`rounded-3xl border px-5 py-4 text-sm ${
-                        cooldownRemainingMs > 0
-                            ? "border-amber-300/30 bg-amber-300/10 text-amber-100"
-                            : "border-cyan-300/30 bg-cyan-300/10 text-cyan-100"
-                    }`}
-                >
-                    {cooldownRemainingMs > 0
-                        ? `Locked for ${cooldownRemainingSeconds}s. Pick your next amount now.`
-                        : "Choose a quick amount or enter a custom value, then claim your credits."}
+                <div className="rounded-3xl border border-cyan-300/30 bg-cyan-300/10 px-5 py-4 text-sm text-cyan-100">
+                    Choose a quick amount or enter a custom value, then claim your credits.
                 </div>
 
                 <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
@@ -138,11 +121,6 @@ export function TopUp({ policy, onConfirm, onCancel }: TopUpProps) {
                             <p className="mt-2 font-display text-2xl text-white">
                                 ₵ {formatBalance(policy.minAmount)} - ₵ {formatBalance(policy.maxAmount)}
                             </p>
-                        </div>
-
-                        <div className="mt-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                            <p className="text-[10px] uppercase tracking-[0.26em] text-slate-400">Cooldown</p>
-                            <p className="mt-2 font-display text-2xl text-white">{policy.cooldownSeconds}s</p>
                         </div>
 
                         {error && <p className="mt-3 text-xs uppercase tracking-[0.24em] text-rose-200">{error}</p>}

@@ -64,6 +64,7 @@ import { VisualAvatar } from "./components/VisualAvatar";
 import { SettingsPanel } from "./components/SettingsPanel";
 
 type View = "lobby" | "missions" | "achievements" | "coinflip" | "dice" | "blackjack" | "slots" | "roulette" | "crash" | "mines" | "history" | "topup" | "profile" | "notifications" | "settings";
+const AI_MOTIVATOR_STORAGE_KEY = "lm_ai_motivator_enabled_v1";
 
 export function App() {
     const [view, setView] = useState<View>("lobby");
@@ -76,6 +77,13 @@ export function App() {
     const [showSignInModal, setShowSignInModal] = useState(false);
     const [achievementToasts, setAchievementToasts] = useState<Achievement[]>([]);
     const [avatarOutcome, setAvatarOutcome] = useState<BetRecord | null>(null);
+    const [isAiMotivatorEnabled, setIsAiMotivatorEnabled] = useState(() => {
+        if (typeof window === "undefined") {
+            return true;
+        }
+
+        return window.localStorage.getItem(AI_MOTIVATOR_STORAGE_KEY) !== "0";
+    });
     const hasHydratedAchievements = useRef(false);
     const unlockedAchievementKeys = useRef<Set<string>>(new Set());
     const previousSessionId = useRef<string | null>(null);
@@ -98,6 +106,14 @@ export function App() {
 
         setShowAuthModal(true);
     }, []);
+
+    useEffect(() => {
+        if (typeof window === "undefined") {
+            return;
+        }
+
+        window.localStorage.setItem(AI_MOTIVATOR_STORAGE_KEY, isAiMotivatorEnabled ? "1" : "0");
+    }, [isAiMotivatorEnabled]);
 
     useEffect(() => {
         if (view !== "coinflip" && view !== "blackjack" && view !== "dice" && view !== "crash" && view !== "mines" && view !== "slots") {
@@ -648,7 +664,11 @@ export function App() {
                         <Profile session={state.session} onDeleteAccount={handleDeleteAccount} />
                     )}
                     {!isLoading && state && view === "settings" && (
-                        <SettingsPanel isLoggedIn={!!state.session.userId} />
+                        <SettingsPanel
+                            isAiMotivatorEnabled={isAiMotivatorEnabled}
+                            isLoggedIn={!!state.session.userId}
+                            onAiMotivatorEnabledChange={setIsAiMotivatorEnabled}
+                        />
                     )}
                 </main>
             </div>
@@ -681,7 +701,7 @@ export function App() {
                     );
                 }}
             />
-            {!showAuthModal && !showSignInModal && (
+            {isAiMotivatorEnabled && !showAuthModal && !showSignInModal && (
                 <VisualAvatar
                     isLoading={isLoading}
                     loadingError={loadingError}

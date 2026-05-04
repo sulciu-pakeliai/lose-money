@@ -25,7 +25,6 @@ const (
 	maxBetAmount      = int64(10000)
 	minTopUpAmount    = int64(1)
 	maxTopUpAmount    = int64(10000)
-	topUpCooldown     = 30 * time.Second
 	historyLimit      = 20
 	baseXPPerLevel    = int64(100)
 	xpStepPerLevel    = int64(75)
@@ -75,11 +74,9 @@ type betRecord struct {
 }
 
 type topUpPolicy struct {
-	AllowedAmounts  []int64    `json:"allowedAmounts"`
-	MinAmount       int64      `json:"minAmount"`
-	MaxAmount       int64      `json:"maxAmount"`
-	CooldownSeconds int        `json:"cooldownSeconds"`
-	AvailableAt     *time.Time `json:"availableAt,omitempty"`
+	AllowedAmounts []int64 `json:"allowedAmounts"`
+	MinAmount      int64   `json:"minAmount"`
+	MaxAmount      int64   `json:"maxAmount"`
 }
 
 type stateResponse struct {
@@ -721,13 +718,6 @@ func (a *application) handleTopUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if waitUntil := nextTopUpAt(locked.LastTopUpAt); waitUntil != nil {
-		writeJSON(w, http.StatusTooManyRequests, errorResponse{
-			Error: fmt.Sprintf("top up is cooling down until %s", waitUntil.Format(time.RFC3339)),
-		})
-		return
-	}
-
 	now := time.Now().UTC()
 	nextBalance := locked.Balance + req.Amount
 	if _, err := tx.Exec(
@@ -1031,25 +1021,10 @@ func normalizeSide(raw string) string {
 
 func buildTopUpPolicy(lastTopUpAt *time.Time) topUpPolicy {
 	return topUpPolicy{
-		AllowedAmounts:  allowedTopUpAmounts,
-		MinAmount:       minTopUpAmount,
-		MaxAmount:       maxTopUpAmount,
-		CooldownSeconds: int(topUpCooldown / time.Second),
-		AvailableAt:     nextTopUpAt(lastTopUpAt),
+		AllowedAmounts: allowedTopUpAmounts,
+		MinAmount:      minTopUpAmount,
+		MaxAmount:      maxTopUpAmount,
 	}
-}
-
-func nextTopUpAt(lastTopUpAt *time.Time) *time.Time {
-	if lastTopUpAt == nil {
-		return nil
-	}
-
-	next := lastTopUpAt.Add(topUpCooldown)
-	if time.Now().UTC().Before(next) {
-		return &next
-	}
-
-	return nil
 }
 
 func isValidTopUpAmount(amount int64) bool {

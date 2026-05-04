@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"net/http/httptest"
 	"testing"
-	"time"
 )
 
 func TestNormalizeSide(t *testing.T) {
@@ -204,20 +203,7 @@ func TestMinesMathHelpers(t *testing.T) {
 func TestTopUpPolicyHelpers(t *testing.T) {
 	t.Parallel()
 
-	if got := nextTopUpAt(nil); got != nil {
-		t.Fatalf("nextTopUpAt(nil) = %v, want nil", got)
-	}
-
-	now := time.Now().UTC()
-	got := nextTopUpAt(&now)
-	if got == nil || !got.After(now) {
-		t.Fatalf("nextTopUpAt(now) = %v, want future time", got)
-	}
-
 	policy := buildTopUpPolicy(nil)
-	if policy.CooldownSeconds != int(topUpCooldown/time.Second) {
-		t.Fatalf("CooldownSeconds = %d, want %d", policy.CooldownSeconds, int(topUpCooldown/time.Second))
-	}
 	if len(policy.AllowedAmounts) != len(allowedTopUpAmounts) {
 		t.Fatalf("AllowedAmounts length = %d, want %d", len(policy.AllowedAmounts), len(allowedTopUpAmounts))
 	}

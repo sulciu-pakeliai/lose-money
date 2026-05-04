@@ -19,7 +19,17 @@ const EXCLUSION_OPTIONS = [
     { label: "6 months",  hours: 4320 },
 ];
 
-export function SettingsPanel({ isLoggedIn }: { isLoggedIn: boolean }) {
+type SettingsPanelProps = {
+    isAiMotivatorEnabled: boolean;
+    isLoggedIn: boolean;
+    onAiMotivatorEnabledChange: (isEnabled: boolean) => void;
+};
+
+export function SettingsPanel({
+    isAiMotivatorEnabled,
+    isLoggedIn,
+    onAiMotivatorEnabledChange,
+}: SettingsPanelProps) {
     const [settings, setSettings] = useState<SettingsDTO | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
@@ -232,6 +242,30 @@ export function SettingsPanel({ isLoggedIn }: { isLoggedIn: boolean }) {
                         </button>
                     </div>
                 )}
+            </div>
+
+            {/* AI Motivator */}
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <p className="text-xs uppercase tracking-[0.3em] text-slate-300/70">AI Motivator</p>
+                        <p className="mt-2 text-sm text-slate-300/70">
+                            Show Coral's floating advice and reactions while you play.
+                        </p>
+                    </div>
+                    <button
+                        aria-pressed={isAiMotivatorEnabled}
+                        onClick={() => onAiMotivatorEnabledChange(!isAiMotivatorEnabled)}
+                        className={`min-w-28 rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] transition ${
+                            isAiMotivatorEnabled
+                                ? "border-emerald-300/50 bg-emerald-400/20 text-emerald-100 hover:bg-emerald-400/30"
+                                : "border-white/10 bg-white/5 text-slate-300/70 hover:border-white/20 hover:text-white"
+                        }`}
+                        type="button"
+                    >
+                        {isAiMotivatorEnabled ? "Enabled" : "Disabled"}
+                    </button>
+                </div>
             </div>
 
             {/* Theme */}
