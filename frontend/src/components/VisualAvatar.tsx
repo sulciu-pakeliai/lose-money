@@ -18,13 +18,14 @@ type AvatarView =
     | "roulette"
     | "mines"
     | "slots"
+    | "plinko"
     | "crash"
     | "history"
     | "topup"
     | "profile"
     | "notifications"
     | "settings";
-type AvatarGameKey = "coinflip" | "dice" | "blackjack" | "roulette" | "slots" | "crash" | "mines";
+type AvatarGameKey = "coinflip" | "dice" | "blackjack" | "roulette" | "slots" | "plinko" | "crash" | "mines";
 
 type DialogueBeat = {
     emotion: AvatarEmotion;
@@ -66,6 +67,7 @@ const gameLabels: Record<AvatarGameKey, string> = {
     dice: "dice roll",
     roulette: "roulette spin",
     slots: "slot spin",
+    plinko: "Plinko drop",
     mines: "mines round",
 };
 
@@ -172,6 +174,8 @@ function normalizeGameKey(game: string): AvatarGameKey | null {
             return "roulette";
         case "slots":
             return "slots";
+        case "plinko":
+            return "plinko";
         case "crash":
             return "crash";
         case "mines":
@@ -247,6 +251,13 @@ function getPostOutcomeRecommendation(event: BetRecord, gameKey: AvatarGameKey):
                 emotion: event.outcome === "win" ? "happy" : "neutral",
                 animation: "talk",
                 line: event.outcome === "win" ? "Next spin: same wager once, then act disciplined." : "Next spin: smaller wager. Make the machine work harder for the drama.",
+                durationMs: 6600,
+            };
+        case "plinko":
+            return {
+                emotion: event.outcome === "win" ? "happy" : "neutral",
+                animation: "talk",
+                line: event.outcome === "win" ? "Next drop: same risk, smaller speech." : "Next drop: less edge-chasing until the board apologizes.",
                 durationMs: 6600,
             };
         case "crash":

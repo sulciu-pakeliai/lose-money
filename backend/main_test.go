@@ -112,6 +112,40 @@ func TestResolveRouletteSpin(t *testing.T) {
 	}
 }
 
+func TestPlinkoHelpers(t *testing.T) {
+	t.Parallel()
+
+	if got := normalizePlinkoRisk("normal"); got != plinkoRiskMedium {
+		t.Fatalf("normalizePlinkoRisk(normal) = %q, want %q", got, plinkoRiskMedium)
+	}
+	if got := normalizePlinkoRisk("HIGH"); got != plinkoRiskHigh {
+		t.Fatalf("normalizePlinkoRisk(HIGH) = %q, want %q", got, plinkoRiskHigh)
+	}
+	if got := normalizePlinkoRisk("wild"); got != "" {
+		t.Fatalf("normalizePlinkoRisk(wild) = %q, want empty", got)
+	}
+	if got := resolvePlinkoOutcome(100, 120); got != "win" {
+		t.Fatalf("resolvePlinkoOutcome win = %q", got)
+	}
+	if got := resolvePlinkoOutcome(100, 100); got != "push" {
+		t.Fatalf("resolvePlinkoOutcome push = %q", got)
+	}
+	if got := resolvePlinkoOutcome(100, 50); got != "loss" {
+		t.Fatalf("resolvePlinkoOutcome loss = %q", got)
+	}
+
+	path, finalSlot, err := randomPlinkoPath(plinkoRows)
+	if err != nil {
+		t.Fatalf("randomPlinkoPath returned error: %v", err)
+	}
+	if len(path) != plinkoRows {
+		t.Fatalf("path length = %d, want %d", len(path), plinkoRows)
+	}
+	if finalSlot < 0 || finalSlot > plinkoRows {
+		t.Fatalf("finalSlot = %d, want within board", finalSlot)
+	}
+}
+
 func TestLevelAndRewardHelpers(t *testing.T) {
 	t.Parallel()
 

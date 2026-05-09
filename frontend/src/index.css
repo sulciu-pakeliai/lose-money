@@ -448,6 +448,12 @@
       linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(240, 249, 255, 0.88)) !important;
   }
 
+  [data-theme="light"] .game-shell-plinko {
+    background:
+      radial-gradient(circle at top right, rgba(20, 184, 166, 0.16), transparent 46%),
+      linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(240, 253, 250, 0.88)) !important;
+  }
+
   [data-theme="light"] .game-shell-blackjack {
     background:
       radial-gradient(circle at top, rgba(16, 185, 129, 0.18), transparent 48%),
@@ -896,6 +902,152 @@ input[type="number"] {
   animation: slot-reel-lock 260ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
 }
 
+.plinko-board {
+  position: relative;
+  overflow: hidden;
+}
+
+.plinko-field {
+  position: relative;
+  min-height: 30rem;
+  border-radius: 1.25rem;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 8%, rgba(34, 211, 238, 0.18), transparent 30%),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.84), rgba(2, 6, 23, 0.54));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.plinko-field::after {
+  content: "";
+  position: absolute;
+  left: 7%;
+  right: 7%;
+  bottom: 0.35rem;
+  height: 3.3rem;
+  border-radius: 0.85rem 0.85rem 0.35rem 0.35rem;
+  background:
+    linear-gradient(90deg, transparent 0 8.6%, rgba(255, 255, 255, 0.1) 8.6% 8.9%, transparent 8.9% 17.7%, rgba(255, 255, 255, 0.1) 17.7% 18%, transparent 18% 26.8%, rgba(255, 255, 255, 0.1) 26.8% 27.1%, transparent 27.1% 35.9%, rgba(255, 255, 255, 0.1) 35.9% 36.2%, transparent 36.2% 45%, rgba(255, 255, 255, 0.1) 45% 45.3%, transparent 45.3% 54.1%, rgba(255, 255, 255, 0.1) 54.1% 54.4%, transparent 54.4% 63.2%, rgba(255, 255, 255, 0.1) 63.2% 63.5%, transparent 63.5% 72.3%, rgba(255, 255, 255, 0.1) 72.3% 72.6%, transparent 72.6% 81.4%, rgba(255, 255, 255, 0.1) 81.4% 81.7%, transparent 81.7% 90.5%, rgba(255, 255, 255, 0.1) 90.5% 90.8%, transparent 90.8%),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.08), rgba(15, 23, 42, 0.58));
+  pointer-events: none;
+}
+
+.plinko-field::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 2rem 2rem;
+  opacity: 0.42;
+  pointer-events: none;
+}
+
+.plinko-dropper {
+  position: absolute;
+  left: 50%;
+  top: 0.55rem;
+  z-index: 3;
+  width: 4.8rem;
+  height: 1.25rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(103, 232, 249, 0.26);
+  background:
+    radial-gradient(circle at 50% 100%, rgba(34, 211, 238, 0.34), transparent 48%),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(8, 47, 73, 0.72));
+  box-shadow: 0 16px 34px rgba(2, 6, 23, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transform: translateX(-50%);
+}
+
+.plinko-peg {
+  position: absolute;
+  z-index: 2;
+  width: clamp(0.44rem, 1.3vw, 0.62rem);
+  height: clamp(0.44rem, 1.3vw, 0.62rem);
+  border-radius: 9999px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(103, 232, 249, 0.86));
+  box-shadow:
+    0 0 18px rgba(34, 211, 238, 0.32),
+    0 8px 16px rgba(2, 6, 23, 0.26);
+  transform: translate(-50%, -50%);
+  transition:
+    box-shadow 110ms ease,
+    filter 110ms ease,
+    transform 110ms ease;
+}
+
+.plinko-peg-active {
+  box-shadow:
+    0 0 26px rgba(250, 204, 21, 0.58),
+    0 0 12px rgba(34, 211, 238, 0.42),
+    0 10px 18px rgba(2, 6, 23, 0.3);
+  filter: brightness(1.35) saturate(1.2);
+  transform: translate(-50%, -50%) scale(1.34);
+}
+
+.plinko-ball {
+  position: absolute;
+  z-index: 4;
+  width: clamp(0.82rem, 2.5vw, 1.08rem);
+  height: clamp(0.82rem, 2.5vw, 1.08rem);
+  border-radius: 9999px;
+  background:
+    radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.96), transparent 18%),
+    linear-gradient(145deg, rgb(34, 211, 238), rgb(16, 185, 129));
+  box-shadow:
+    0 0 24px rgba(34, 211, 238, 0.44),
+    0 16px 28px rgba(2, 6, 23, 0.34);
+  transform: translate(-50%, -50%);
+  transition:
+    opacity 260ms ease,
+    filter 180ms ease;
+  will-change: left, top, transform;
+}
+
+.plinko-ball-live {
+  animation: plinko-ball-pulse 420ms ease-in-out infinite;
+}
+
+.plinko-ball-win,
+.plinko-ball-push {
+  filter: saturate(1.18) drop-shadow(0 0 18px rgba(52, 211, 153, 0.42));
+}
+
+.plinko-ball-loss {
+  background:
+    radial-gradient(circle at 32% 26%, rgba(255, 255, 255, 0.9), transparent 18%),
+    linear-gradient(145deg, rgb(251, 113, 133), rgb(244, 63, 94));
+  filter: drop-shadow(0 0 18px rgba(244, 63, 94, 0.35));
+}
+
+.plinko-ball-exiting {
+  pointer-events: none;
+  transition:
+    top 340ms cubic-bezier(0.24, 0.74, 0.42, 1),
+    opacity 260ms ease,
+    filter 180ms ease;
+}
+
+.plinko-bucket {
+  min-width: 0;
+  font-size: clamp(0.58rem, 1.55vw, 0.88rem);
+  line-height: 1;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition:
+    filter 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.plinko-bucket-row {
+  padding-inline: 7%;
+}
+
+.plinko-bucket-hit {
+  animation: plinko-bucket-hit 420ms cubic-bezier(0.18, 0.9, 0.22, 1) both;
+}
+
 @keyframes die-shake {
   0% {
     transform: rotate(0deg) translateY(0);
@@ -949,6 +1101,33 @@ input[type="number"] {
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes plinko-ball-pulse {
+  0% {
+    filter: drop-shadow(0 0 0 rgba(34, 211, 238, 0.2));
+  }
+  50% {
+    filter: drop-shadow(0 0 14px rgba(34, 211, 238, 0.5));
+  }
+  100% {
+    filter: drop-shadow(0 0 0 rgba(34, 211, 238, 0.2));
+  }
+}
+
+@keyframes plinko-bucket-hit {
+  from {
+    transform: translateY(0) scale(0.96);
+    filter: brightness(1);
+  }
+  55% {
+    transform: translateY(-4px) scale(1.08);
+    filter: brightness(1.28);
+  }
+  to {
+    transform: translateY(0) scale(1);
+    filter: brightness(1);
   }
 }
 
@@ -2196,6 +2375,32 @@ input[type="number"] {
 
 [data-theme="light"] .slot-reel-window::after {
   background: linear-gradient(0deg, rgba(15, 23, 42, 0.12), transparent);
+}
+
+[data-theme="light"] .plinko-field {
+  background:
+    radial-gradient(circle at 50% 8%, rgba(14, 165, 233, 0.14), transparent 30%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(241, 245, 249, 0.72));
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] .plinko-field::before {
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.055) 1px, transparent 1px);
+}
+
+[data-theme="light"] .plinko-peg {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(14, 165, 233, 0.64));
+  box-shadow:
+    0 0 16px rgba(14, 165, 233, 0.16),
+    0 8px 14px rgba(15, 23, 42, 0.14);
+}
+
+[data-theme="light"] .plinko-ball {
+  box-shadow:
+    0 0 20px rgba(14, 165, 233, 0.22),
+    0 14px 24px rgba(15, 23, 42, 0.18);
 }
 
 [data-theme="light"] .mines-cell-safe::before {

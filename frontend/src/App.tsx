@@ -22,6 +22,7 @@ import {
     splitBlackjack,
     submitCoinFlip,
     submitSlotSpin,
+    submitPlinkoDrop,
     type Achievement,
     type AppState,
     type BetRecord,
@@ -35,6 +36,8 @@ import {
     type DiceRollResult,
     type MissionClaimResult,
     type MinesActionResult,
+    type PlinkoDropResult,
+    type PlinkoRisk,
     type RouletteBetType,
     type RouletteResult,
     type TopUpResult,
@@ -50,6 +53,7 @@ import { CoinFlipGame } from "./components/CoinFlipGame";
 import { DiceGame } from "./components/DiceGame";
 import { BlackjackGame } from "./components/BlackjackGame";
 import { SlotGame } from "./components/SlotGame";
+import { PlinkoGame } from "./components/PlinkoGame";
 import { RouletteGame } from "./components/RouletteGame";
 import { CrashGame } from "./components/CrashGame";
 import { MinesGame } from "./components/MinesGame";
@@ -63,7 +67,7 @@ import { AchievementUnlockToasts } from "./components/AchievementUnlockToasts";
 import { VisualAvatar } from "./components/VisualAvatar";
 import { SettingsPanel } from "./components/SettingsPanel";
 
-type View = "lobby" | "missions" | "achievements" | "coinflip" | "dice" | "blackjack" | "slots" | "roulette" | "crash" | "mines" | "history" | "topup" | "profile" | "notifications" | "settings";
+type View = "lobby" | "missions" | "achievements" | "coinflip" | "dice" | "blackjack" | "slots" | "plinko" | "roulette" | "crash" | "mines" | "history" | "topup" | "profile" | "notifications" | "settings";
 const AI_MOTIVATOR_STORAGE_KEY = "lm_ai_motivator_enabled_v1";
 
 export function App() {
@@ -116,7 +120,7 @@ export function App() {
     }, [isAiMotivatorEnabled]);
 
     useEffect(() => {
-        if (view !== "coinflip" && view !== "blackjack" && view !== "dice" && view !== "crash" && view !== "mines" && view !== "slots") {
+        if (view !== "coinflip" && view !== "blackjack" && view !== "dice" && view !== "crash" && view !== "mines" && view !== "slots" && view !== "plinko") {
             return;
         }
 
@@ -360,6 +364,54 @@ export function App() {
         );
     };
 
+    const applyPlinkoDrop = (next: PlinkoDropResult) => {
+        setState(current =>
+            current ? {
+                ...current,
+                session: {
+                    ...(next.session.gamesPlayed >= current.session.gamesPlayed ? next.session : current.session),
+                    balance: current.session.balance + next.drop.payout,
+                },
+                history: current.history.some(entry => entry.id === next.bet.id)
+                    ? current.history
+                    : [next.bet, ...current.history].slice(0, 100),
+                topUp: next.session.gamesPlayed >= current.session.gamesPlayed ? next.topUp : current.topUp,
+                missions: next.session.gamesPlayed >= current.session.gamesPlayed ? next.missions : current.missions,
+                achievements: next.session.gamesPlayed >= current.session.gamesPlayed ? next.achievements : current.achievements,
+                notifications: next.session.gamesPlayed >= current.session.gamesPlayed ? next.notifications : current.notifications,
+            }
+            : current,
+        );
+    };
+
+    const reservePlinkoBet = (amount: number) => {
+        setState(current =>
+            current
+                ? {
+                    ...current,
+                    session: {
+                        ...current.session,
+                        balance: current.session.balance - amount,
+                    },
+                }
+                : current,
+        );
+    };
+
+    const refundPlinkoBet = (amount: number) => {
+        setState(current =>
+            current
+                ? {
+                    ...current,
+                    session: {
+                        ...current.session,
+                        balance: current.session.balance + amount,
+                    },
+                }
+                : current,
+        );
+    };
+
     const applyMissionClaim = (next: MissionClaimResult) => {
         setState(current =>
             current
@@ -463,6 +515,16 @@ export function App() {
         const next = await submitSlotSpin(amount);
         applySlotSpin(next);
         return next;
+    };
+
+    const handlePlinkoDrop = async (amount: number, risk: PlinkoRisk) => {
+        reservePlinkoBet(amount);
+        try {
+            return await submitPlinkoDrop(amount, risk);
+        } catch (error) {
+            refundPlinkoBet(amount);
+            throw error;
+        }
     };
 
     const handleMissionClaim = async (missionId: string) => {
@@ -579,6 +641,7 @@ export function App() {
                             onSelectCrash={() => setView("crash")}
                             onSelectMines={() => setView("mines")}
                             onSelectSlots={() => setView("slots")}
+                            onSelectPlinko={() => setView("plinko")}
                             onSelectTopUp={() => setView("topup")}
                             onOpenMissions={() => setView("missions")}
                             onOpenAchievements={() => setView("achievements")}
@@ -652,6 +715,15 @@ export function App() {
                             balance={state.session.balance} 
                             onSpin={handleSlotSpin} 
                             onOpenRules={() => openRules("slots")}
+                            onOutcomeReveal={setAvatarOutcome}
+                        />
+                    )}
+                    {!isLoading && state && view === "plinko" && (
+                        <PlinkoGame
+                            balance={state.session.balance}
+                            onDrop={handlePlinkoDrop}
+                            onDropSettled={applyPlinkoDrop}
+                            onOpenRules={() => openRules("plinko")}
                             onOutcomeReveal={setAvatarOutcome}
                         />
                     )}

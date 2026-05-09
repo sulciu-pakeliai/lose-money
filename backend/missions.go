@@ -17,6 +17,7 @@ const (
 	missionScopeDice      = "dice"
 	missionScopeRoulette  = "roulette"
 	missionScopeMines     = "mines"
+	missionScopePlinko    = "plinko"
 
 	missionMetricRounds = "rounds_played"
 	missionMetricWins   = "wins"

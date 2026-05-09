@@ -1,4 +1,4 @@
-export type GameRuleKey = "coinflip" | "blackjack" | "dice" | "roulette" | "crash" | "mines" | "slots";
+export type GameRuleKey = "coinflip" | "blackjack" | "dice" | "roulette" | "crash" | "mines" | "slots" | "plinko";
 
 export type GameRuleDefinition = {
     eyebrow: string;
@@ -183,5 +183,29 @@ export const GAME_RULES: Record<GameRuleKey, GameRuleDefinition> = {
             },
         ],
         footer: "Tip: Open the payout table to compare each symbol line and multiplier before placing larger wagers.",
+    },
+    plinko: {
+        eyebrow: "Quick Guide",
+        title: "How Plinko Works",
+        summary: "Drop a ball through the peg board and collect the multiplier where it lands.",
+        steps: [
+            {
+                title: "Choose risk",
+                body: "Low, medium, and high risk use different bucket multipliers. Higher risk puts more value on the edge buckets.",
+            },
+            {
+                title: "Set your wager",
+                body: "Pick a preset chip or type a custom bet before dropping the ball.",
+            },
+            {
+                title: "Server drops the ball",
+                body: "The backend resolves every left and right bounce, then returns the path for the board animation.",
+            },
+            {
+                title: "Land in a bucket",
+                body: "Your payout is the wager multiplied by the final bucket. Some middle buckets can pay less than your stake.",
+            },
+        ],
+        footer: "Tip: Edge buckets hit less often, but they carry the largest Plinko multipliers.",
     },
 };

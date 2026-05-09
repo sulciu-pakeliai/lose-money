@@ -8,6 +8,7 @@ type LobbyProps = {
     onSelectCrash: () => void;
     onSelectMines: () => void;
     onSelectSlots: () => void;
+    onSelectPlinko: () => void;
     onSelectTopUp: () => void;
     onOpenMissions: () => void;
     onOpenAchievements: () => void;
@@ -65,6 +66,13 @@ const gameTiles = [
         icon: "🎰",
         onSelect: "slots",
     },
+    {
+        title: "Plinko",
+        subtitle: "Drop Board",
+        accent: "from-cyan-300 via-emerald-400 to-lime-300",
+        icon: "🔵",
+        onSelect: "plinko",
+    },
 ] as const;
 
 export function Lobby({
@@ -75,6 +83,7 @@ export function Lobby({
     onSelectCrash,
     onSelectMines,
     onSelectSlots,
+    onSelectPlinko,
     onSelectTopUp: _onSelectTopUp,
     onOpenMissions,
     onOpenAchievements,
@@ -162,7 +171,8 @@ export function Lobby({
                                     tile.onSelect === "roulette" ? onSelectRoulette :
                                     tile.onSelect === "crash" ? onSelectCrash :
                                     tile.onSelect === "mines" ? onSelectMines :
-                                    onSelectSlots}
+                                    tile.onSelect === "slots" ? onSelectSlots :
+                                    onSelectPlinko}
                                 className={`lobby-game-tile group relative overflow-hidden rounded-2xl border border-white/10 bg-linear-to-br from-slate-950/70 via-slate-900/70 to-slate-950/80 p-5 text-left transition hover:-translate-y-1 hover:border-white/20 hover:shadow-[0_25px_60px_rgba(14,116,144,0.35)] ${
                                     index === gameTiles.length - 1 && gameTiles.length % 2 === 1 ? "lobby-game-tile-last md:col-span-2 md:justify-self-center" : ""
                                 }`}

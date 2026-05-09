@@ -161,6 +161,7 @@ func main() {
 	mux.HandleFunc("POST /api/coinflip", app.handleCoinFlip)
 	mux.HandleFunc("POST /api/dice", app.handleDiceRoll)
 	mux.HandleFunc("POST /api/roulette", app.handleRoulette)
+	mux.HandleFunc("POST /api/plinko/drop", app.handlePlinkoDrop)
 	mux.HandleFunc("POST /api/top-up", app.handleTopUp)
 	mux.HandleFunc("POST /api/missions/claim", app.handleMissionClaim)
 	mux.HandleFunc("POST /api/blackjack/start", app.handleBlackjackStart)
@@ -992,6 +993,8 @@ func calculateXPReward(game string, amount int64, outcome string, status string)
 		case "cashout":
 			statusBonus = 12
 		}
+	} else if game == "plinko" && status == "edge_bucket" {
+		statusBonus = 18
 	}
 
 	return base + volumeBonus + outcomeBonus + statusBonus

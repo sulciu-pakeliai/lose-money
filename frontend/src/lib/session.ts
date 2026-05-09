@@ -1,5 +1,6 @@
 export type CoinSide = "Heads" | "Tails";
 export type DiceBetType = "low" | "high" | "lucky7";
+export type PlinkoRisk = "low" | "medium" | "high";
 
 export type Session = {
     id: string;
@@ -75,7 +76,7 @@ export type Mission = {
     groupName: string;
     title: string;
     description: string;
-    gameScope: "all" | "coinflip" | "blackjack" | "dice" | "slots" | "crash" | "mines";
+    gameScope: "all" | "coinflip" | "blackjack" | "dice" | "roulette" | "slots" | "crash" | "mines" | "plinko";
     target: number;
     progress: number;
     rewardBalance: number;
@@ -92,7 +93,7 @@ export type Achievement = {
     groupName: string;
     title: string;
     description: string;
-    gameScope: "all" | "coinflip" | "blackjack" | "dice" | "slots" | "crash" | "mines";
+    gameScope: "all" | "coinflip" | "blackjack" | "dice" | "roulette" | "slots" | "crash" | "mines" | "plinko";
     rarity: "common" | "uncommon" | "rare" | "epic";
     accent: "copper" | "cyan" | "emerald" | "rose" | "gold";
     iconLabel: string;
@@ -212,6 +213,26 @@ export type SlotSpinResult = {
     outcome: "win" | "loss";
     multiplier: number;
     payout: number;
+    topUp: TopUpPolicy;
+    missions: Mission[];
+    achievements: Achievement[];
+    notifications: AppNotification[];
+};
+
+export type PlinkoDropSummary = {
+    risk: PlinkoRisk;
+    rows: number;
+    path: number[];
+    finalSlot: number;
+    multiplier: number;
+    payout: number;
+    outcome: "win" | "loss" | "push";
+};
+
+export type PlinkoDropResult = {
+    session: Session;
+    bet: BetRecord;
+    drop: PlinkoDropSummary;
     topUp: TopUpPolicy;
     missions: Mission[];
     achievements: Achievement[];
@@ -452,6 +473,14 @@ export async function submitSlotSpin(amount: number): Promise<SlotSpinResult> {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ amount }),
+    });
+}
+
+export async function submitPlinkoDrop(amount: number, risk: PlinkoRisk): Promise<PlinkoDropResult> {
+    return apiFetch<PlinkoDropResult>("/api/plinko/drop", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount, risk }),
     });
 }
 
