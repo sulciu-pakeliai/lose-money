@@ -35,3 +35,4 @@ For the full documentation see the [wiki](../../wiki):
 - [Getting Started](../../wiki/Getting-Started)
 - [API](../../wiki/API)
 - [Database Schema](../../wiki/Database-Schema)
+- [Technology Decisions](../../wiki/Technology-Decisions)
