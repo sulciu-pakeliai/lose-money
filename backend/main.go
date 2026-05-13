@@ -12,7 +12,12 @@ import (
 	"math/big"
 	"net/http"
 	"os"
+	"os/signal"
+	"path/filepath"
+	"runtime"
+	"runtime/pprof"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -137,6 +142,12 @@ func main() {
 	databaseURL := envOrDefault("DATABASE_URL", "postgres://postgres:example@localhost:5432/postgres?sslmode=disable")
 	port := envOrDefault("PORT", "8080")
 
+	profiles, err := startFileProfiles()
+	if err != nil {
+		log.Fatalf("start profiling: %v", err)
+	}
+	defer profiles.Stop()
+
 	db, err := openDatabase(ctx, databaseURL)
 	if err != nil {
 		log.Fatalf("connect database: %v", err)
@@ -191,9 +202,119 @@ func main() {
 	}
 
 	log.Printf("backend listening on :%s", port)
-	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		log.Fatalf("listen: %v", err)
+	serverErrors := make(chan error, 1)
+	go func() {
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			serverErrors <- err
+			return
+		}
+		serverErrors <- nil
+	}()
+
+	shutdownCtx, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stopSignals()
+
+	select {
+	case err := <-serverErrors:
+		if err != nil {
+			log.Fatalf("listen: %v", err)
+		}
+	case <-shutdownCtx.Done():
+		stopSignals()
+		log.Printf("shutdown signal received")
+
+		gracefulCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := server.Shutdown(gracefulCtx); err != nil {
+			log.Printf("graceful shutdown failed: %v", err)
+			if err := server.Close(); err != nil {
+				log.Printf("force shutdown failed: %v", err)
+			}
+		}
+
+		if err := <-serverErrors; err != nil {
+			log.Printf("server stopped with error: %v", err)
+		}
 	}
+}
+
+type fileProfiles struct {
+	cpuFile *os.File
+	memPath string
+}
+
+func startFileProfiles() (*fileProfiles, error) {
+	profiles := &fileProfiles{
+		memPath: strings.TrimSpace(os.Getenv("MEM_PROFILE")),
+	}
+
+	cpuPath := strings.TrimSpace(os.Getenv("CPU_PROFILE"))
+	if cpuPath != "" {
+		file, err := createProfileFile(cpuPath)
+		if err != nil {
+			return nil, fmt.Errorf("create cpu profile: %w", err)
+		}
+
+		if err := pprof.StartCPUProfile(file); err != nil {
+			file.Close()
+			return nil, fmt.Errorf("start cpu profile: %w", err)
+		}
+
+		profiles.cpuFile = file
+		log.Printf("cpu profiling enabled: %s", cpuPath)
+	}
+
+	if profiles.memPath != "" {
+		if err := os.MkdirAll(filepath.Dir(profiles.memPath), 0o755); err != nil {
+			if profiles.cpuFile != nil {
+				pprof.StopCPUProfile()
+				profiles.cpuFile.Close()
+			}
+			return nil, fmt.Errorf("prepare memory profile directory: %w", err)
+		}
+		log.Printf("memory profiling enabled: %s", profiles.memPath)
+	}
+
+	return profiles, nil
+}
+
+func (p *fileProfiles) Stop() {
+	if p == nil {
+		return
+	}
+
+	if p.cpuFile != nil {
+		pprof.StopCPUProfile()
+		if err := p.cpuFile.Close(); err != nil {
+			log.Printf("close cpu profile: %v", err)
+		}
+		p.cpuFile = nil
+	}
+
+	if p.memPath == "" {
+		return
+	}
+
+	runtime.GC()
+	file, err := createProfileFile(p.memPath)
+	if err != nil {
+		log.Printf("create memory profile: %v", err)
+		return
+	}
+	defer file.Close()
+
+	if err := pprof.WriteHeapProfile(file); err != nil {
+		log.Printf("write memory profile: %v", err)
+		return
+	}
+	log.Printf("memory profile written: %s", p.memPath)
+}
+
+func createProfileFile(path string) (*os.File, error) {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return nil, err
+	}
+	return os.Create(path)
 }
 
 func openDatabase(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {

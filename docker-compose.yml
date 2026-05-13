@@ -11,6 +11,8 @@ services:
     environment:
       - DATABASE_URL=postgres://postgres:example@db:5432/postgres?sslmode=disable
       - PORT=8080
+      - CPU_PROFILE=profiles/manual-cpu.pprof
+      - MEM_PROFILE=profiles/manual-mem.pprof
     ports:
       - "8080:8080"
     healthcheck:
@@ -20,9 +22,10 @@ services:
       retries: 10
     volumes:
       - ./backend:/app
+      - ./profiles:/app/profiles
       # Cache Go modules to speed up repeated runs
       - go-modules:/go/pkg/mod
-    command: ["go", "run", "."]
+    command: ["sh", "-lc", "/usr/local/go/bin/go build -o /tmp/lose-money-backend . && exec /tmp/lose-money-backend"]
 
   frontend:
     build:
