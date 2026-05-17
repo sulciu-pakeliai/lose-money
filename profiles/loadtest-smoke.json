@@ -1,0 +1,143 @@
+{
+  "baseUrl": "http://localhost:8080",
+  "scenario": "mixed",
+  "users": 2,
+  "duration": "3s",
+  "startedAt": "2026-05-13T22:14:09.5731385+03:00",
+  "finishedAt": "2026-05-13T22:14:12.5735166+03:00",
+  "requests": 88,
+  "failures": 0,
+  "throughput": 29.329636821439273,
+  "averageMs": 19.262,
+  "minMs": 2.058,
+  "maxMs": 117.47,
+  "p50Ms": 18.081,
+  "p90Ms": 21.839,
+  "p95Ms": 26.149,
+  "p99Ms": 117.47,
+  "statuses": {
+    "200": 88
+  },
+  "byEndpoint": {
+    "GET /api/profile": {
+      "requests": 6,
+      "failures": 0,
+      "throughput": 1.9997479650981322,
+      "averageMs": 3.489,
+      "minMs": 2.058,
+      "maxMs": 5.997,
+      "p50Ms": 2.384,
+      "p90Ms": 5.997,
+      "p95Ms": 5.997,
+      "p99Ms": 5.997,
+      "statuses": {
+        "200": 6
+      }
+    },
+    "GET /api/state": {
+      "requests": 14,
+      "failures": 0,
+      "throughput": 4.666078585228975,
+      "averageMs": 27.219,
+      "minMs": 10.114,
+      "maxMs": 117.47,
+      "p50Ms": 12.637,
+      "p90Ms": 116.431,
+      "p95Ms": 117.47,
+      "p99Ms": 117.47,
+      "statuses": {
+        "200": 14
+      }
+    },
+    "POST /api/coinflip": {
+      "requests": 8,
+      "failures": 0,
+      "throughput": 2.666330620130843,
+      "averageMs": 19.541,
+      "minMs": 17.462,
+      "maxMs": 26.065,
+      "p50Ms": 18.685,
+      "p90Ms": 26.065,
+      "p95Ms": 26.065,
+      "p99Ms": 26.065,
+      "statuses": {
+        "200": 8
+      }
+    },
+    "POST /api/dice": {
+      "requests": 12,
+      "failures": 0,
+      "throughput": 3.9994959301962645,
+      "averageMs": 19.309,
+      "minMs": 16.828,
+      "maxMs": 27.747,
+      "p50Ms": 18.2,
+      "p90Ms": 20.734,
+      "p95Ms": 27.747,
+      "p99Ms": 27.747,
+      "statuses": {
+        "200": 12
+      }
+    },
+    "POST /api/plinko/drop": {
+      "requests": 17,
+      "failures": 0,
+      "throughput": 5.665952567778041,
+      "averageMs": 18.911,
+      "minMs": 16.302,
+      "maxMs": 27.214,
+      "p50Ms": 18.238,
+      "p90Ms": 21.562,
+      "p95Ms": 27.214,
+      "p99Ms": 27.214,
+      "statuses": {
+        "200": 17
+      }
+    },
+    "POST /api/roulette": {
+      "requests": 8,
+      "failures": 0,
+      "throughput": 2.666330620130843,
+      "averageMs": 19.392,
+      "minMs": 17.137,
+      "maxMs": 23.435,
+      "p50Ms": 18.522,
+      "p90Ms": 23.435,
+      "p95Ms": 23.435,
+      "p99Ms": 23.435,
+      "statuses": {
+        "200": 8
+      }
+    },
+    "POST /api/slots/spin": {
+      "requests": 19,
+      "failures": 0,
+      "throughput": 6.332535222810752,
+      "averageMs": 19.419,
+      "minMs": 17.306,
+      "maxMs": 26.149,
+      "p50Ms": 18.647,
+      "p90Ms": 24.04,
+      "p95Ms": 26.149,
+      "p99Ms": 26.149,
+      "statuses": {
+        "200": 19
+      }
+    },
+    "POST /api/top-up": {
+      "requests": 4,
+      "failures": 0,
+      "throughput": 1.3331653100654215,
+      "averageMs": 14.865,
+      "minMs": 14.241,
+      "maxMs": 15.362,
+      "p50Ms": 14.513,
+      "p90Ms": 15.362,
+      "p95Ms": 15.362,
+      "p99Ms": 15.362,
+      "statuses": {
+        "200": 4
+      }
+    }
+  }
+}
