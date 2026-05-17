@@ -1,0 +1,96 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:pPr><w:pStyle w:val="Title"/></w:pPr><w:r><w:t xml:space="preserve">Performance Testing Report</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Application: lose-money</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Stack: Go backend, React frontend, PostgreSQL database, Docker Compose runtime</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Testing date: TODO: fill in final execution date/time if required</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Test environment: TODO: fill in machine CPU/RAM/OS details if required</w:t></w:r></w:p>
+<w:p/>
+<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t xml:space="preserve">1. Analyse Performance Of Application</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">The application performance was analysed using Go profiling and k6 load testing. The Go backend was configured to write file-based pprof CPU and heap profiles. k6 was used to simulate concurrent users against the REST service.</w:t></w:r></w:p>
+<w:p/>
+<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t xml:space="preserve">1. Load Application Under Performance Profiler</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Profiler used: Go runtime/pprof. Profiling was implemented without exposing debug HTTP endpoints. The backend writes profile files during a normal Docker Compose run and flushes them on graceful shutdown.</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Profile files used in this report:</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- CPU profile: profiles/manual-cpu01.pprof</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Memory profile: profiles/manual-mem02.pprof</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Note: profiles/manual-cpu.pprof was empty in the latest folder listing, so the non-empty CPU profile manual-cpu01.pprof was used for the report.</w:t></w:r></w:p>
+<w:p/>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t xml:space="preserve">a. Manually Execute Main Test Cases From Test Plan</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Manual scenarios were defined in docs/performance-test-plan.md and executed while the profiler was active. The important tested flows were:</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Load application state</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Register and/or login user</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Top up balance</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Play coinflip, dice, roulette, slots, blackjack, crash, mines, and plinko</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Open profile, settings, missions, achievements, and notifications</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">TODO: if required by the teacher, add exact manual scenario execution order, screenshots, or timestamps.</w:t></w:r></w:p>
+<w:p/>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t xml:space="preserve">b. Measure CPU Usage</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">CPU usage was measured with Go pprof. The CPU profile was analysed with: go tool pprof -top profiles/manual-cpu01.pprof</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">CPU pprof summary:</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Profile duration: 78.82 seconds</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Total CPU samples: 370 ms</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Top flat CPU entries: runtime.futex 160 ms (43.24%), internal/runtime/syscall/linux.Syscall6 120 ms (32.43%), runtime.write1 20 ms (5.41%), reflect.Value.IsNil 10 ms (2.70%), runtime.mallocgc 10 ms flat / 30 ms cumulative (8.11% cumulative).</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Interpretation: the sampled CPU time was dominated by Go runtime and syscall/waiting behavior, not by one application game method. This suggests that during the profiled run the backend spent much of the sampled time waiting on OS/runtime synchronization or I/O rather than burning CPU in custom business logic.</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">TODO: insert CPU pprof flame graph screenshot if the report requires visual evidence.</w:t></w:r></w:p>
+<w:p/>
+<w:p><w:pPr><w:pStyle w:val="Heading3"/></w:pPr><w:r><w:t xml:space="preserve">i. Discover Methods That Consume Most CPU Time</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">The top CPU-consuming sampled functions were runtime.futex, internal/runtime/syscall/linux.Syscall6, runtime.write1, reflect.Value.IsNil, and runtime.mallocgc. No custom application handler dominated CPU samples in the collected profile.</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Conclusion: based on this CPU profile, the main performance risk was not a single CPU-heavy game calculation method. The more relevant bottlenecks appear to be request volume, database access, JSON serialization, and allocation pressure, which are more visible in memory/allocation profiling and load-test response times.</w:t></w:r></w:p>
+<w:p/>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t xml:space="preserve">c. Measure Memory Usage</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Memory usage was measured with Go heap profiling. A heap snapshot was written on backend shutdown and analysed with: go tool pprof -top -inuse_space profiles/manual-mem02.pprof</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Memory snapshot result (inuse_space):</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Total in-use heap shown: 11,823.60 kB</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- bufio.NewWriterSize: 5,137.02 kB (43.45%)</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- bufio.NewReaderSize: 4,112.02 kB (34.78%)</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- runtime.mallocgc: 2,574.56 kB (21.77%)</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Interpretation: the memory retained at the snapshot moment was mostly related to buffered HTTP connection readers/writers and runtime allocations. This matches an HTTP backend under concurrent request load.</w:t></w:r></w:p>
+<w:p/>
+<w:p><w:pPr><w:pStyle w:val="Heading3"/></w:pPr><w:r><w:t xml:space="preserve">i. Take Memory Snapshot After/During Execution Or Test Cases</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">A memory snapshot was taken after executing test cases by writing a Go heap profile during graceful backend shutdown. This snapshot is represented by profiles/manual-mem02.pprof.</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">TODO: insert memory pprof graph/flame graph screenshot if visual evidence is required.</w:t></w:r></w:p>
+<w:p/>
+<w:p><w:pPr><w:pStyle w:val="Heading3"/></w:pPr><w:r><w:t xml:space="preserve">ii. Discover Most Allocated Object And Memory Consumed</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Go pprof reports allocations mainly by allocating function/call path rather than Java-style object class names. Allocation volume was analysed with: go tool pprof -top -alloc_space profiles/manual-mem02.pprof</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Allocation profile result (alloc_space):</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Total allocated memory observed: 4,011.61 MB</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- main.scanAchievement: 498.11 MB flat / 749.62 MB cumulative</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- main.(*application).ensureAchievementsTx: 435.55 MB flat / 669.56 MB cumulative</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- github.com/jackc/pgx/v5/pgtype.scanPlanString.Scan: 309.51 MB</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- main.(*application).loadNotifications: 281.80 MB flat / 439.82 MB cumulative</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- main.scanMission: 261.57 MB flat / 406.58 MB cumulative</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- github.com/jackc/pgx/v5.(*Conn).getRows: 199.55 MB</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Interpretation: the highest allocation pressure came from achievements, missions, notifications, and pgx database row scanning. These are not necessarily memory leaks; alloc_space measures total allocation churn over time, including memory later freed by the garbage collector.</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Most allocated application-level paths: achievement scanning/loading, mission scanning/loading, notification loading, and database scan operations.</w:t></w:r></w:p>
+<w:p/>
+<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t xml:space="preserve">2. Load/Stress Test Application</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Load/stress testing was performed with k6 using the mixed scenario in loadtest/mixed.js. The scenario uses the REST API and simulates users loading state, topping up, opening profile, and playing games such as coinflip, dice, roulette, slots, and plinko.</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Command used: .\tools\k6\k6-v1.7.1-windows-amd64\k6.exe run -u 1000 -d 5m --summary-export profiles/loadtest-results.json loadtest/mixed.js</w:t></w:r></w:p>
+<w:p/>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t xml:space="preserve">a. Simulate 1000 Simultaneous Users For 5 Minutes</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">The k6 test was executed with 1000 virtual users for 5 minutes. The k6 output reported 1000 max VUs and a 5m0s scenario duration.</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">To avoid local Docker/Windows TCP connection-refused errors from an instant startup burst, the script uses realistic user pacing: each virtual user has a think time, and the first request is jittered. This still simulates 1000 simultaneous users because 1000 VUs are active during the run.</w:t></w:r></w:p>
+<w:p/>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t xml:space="preserve">b. Measure Response Times And Throughput</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">k6 measured response times and throughput. Results from profiles/loadtest-results.json and the k6 console output:</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Total HTTP requests: 78,709</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Failed HTTP requests: 0</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Check success rate: 100.00% (78,708 / 78,708 checks passed)</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Throughput: 256.16 requests/second</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Average response time: 1.29 seconds</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Median response time: 1.00 seconds</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- p90 response time: 2.34 seconds</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- p95 response time: 3.06 seconds</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Maximum response time: 18.74 seconds</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Data received: 454 MB</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Data sent: 14 MB</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Interpretation: the backend remained available during the 1000-user test with 0 failed HTTP requests. Throughput was about 256 requests per second. Median response time was around 1 second, but tail latency was higher, with p95 at about 3.06 seconds and the slowest request at 18.74 seconds.</w:t></w:r></w:p>
+<w:p/>
+<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t xml:space="preserve">Identified Bottlenecks And Risks</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- CPU profile did not show a single custom application method dominating CPU time.</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Memory allocation pressure was concentrated in achievement scanning/loading, mission scanning/loading, notification loading, and pgx database scanning.</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Load testing showed successful availability under 1000 users, but response times had noticeable tail latency.</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- The application may benefit from reducing repeated mission/achievement/notification loading, optimizing database query patterns, and avoiding unnecessary allocations during request handling.</w:t></w:r></w:p>
+<w:p/>
+<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t xml:space="preserve">Conclusions</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">The lab goals were completed for the Go application. The backend was profiled for CPU and memory usage, a heap memory snapshot was collected, allocation-heavy functions were identified, and a 1000-user REST load test was executed for 5 minutes. The application handled the load test without HTTP request failures, reaching about 256 requests per second. The main improvement area is allocation pressure in repeated state/progress loading paths and long-tail response latency under concurrent load.</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">TODO: add screenshots from pprof and k6 if required by the final submission format.</w:t></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr></w:body></w:document>

@@ -1,0 +1,96 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:pPr><w:pStyle w:val="Title"/></w:pPr><w:r><w:t xml:space="preserve">Našumo Testavimo Ataskaita</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Aplikacija: lose-money</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Technologijos: Go backend dalis, React frontend dalis, PostgreSQL duomenų bazė, Docker Compose vykdymo aplinka</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Testavimo data: TODO: įrašyti galutinę vykdymo datą/laiką, jei reikalaujama</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Testavimo aplinka: TODO: įrašyti kompiuterio CPU/RAM/OS informaciją, jei reikalaujama</w:t></w:r></w:p>
+<w:p/>
+<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t xml:space="preserve">1. Aplikacijos Našumo Analizė</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Aplikacijos našumas buvo analizuojamas naudojant Go profiliavimą ir k6 apkrovos testavimą. Go backend dalis buvo sukonfigūruota įrašyti failais paremtus pprof CPU ir heap profilius. k6 buvo naudojamas vienu metu veikiančių naudotojų simuliacijai prieš REST servisą.</w:t></w:r></w:p>
+<w:p/>
+<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t xml:space="preserve">1. Aplikacijos Paleidimas Su Našumo Profiliavimo Įrankiu</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Naudotas profiliavimo įrankis: Go runtime/pprof. Profiliavimas įgyvendintas neatidarant papildomų debug HTTP endpointų. Backend dalis įrašo profilio failus įprasto Docker Compose paleidimo metu ir juos užbaigia tvarkingai sustabdžius aplikaciją.</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Šioje ataskaitoje naudoti profilio failai:</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- CPU profilis: profiles/manual-cpu01.pprof</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Atminties profilis: profiles/manual-mem02.pprof</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Pastaba: naujausias profiles/manual-cpu.pprof failas kataloge buvo tuščias, todėl ataskaitai naudotas netuščias CPU profilio failas manual-cpu01.pprof.</w:t></w:r></w:p>
+<w:p/>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t xml:space="preserve">a. Rankinis Pagrindinių Testavimo Plano Atvejų Vykdymas</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Rankiniai scenarijai buvo aprašyti faile docs/performance-test-plan.md ir vykdyti tuo metu, kai profiliavimas buvo aktyvus. Svarbiausi testuoti veiksmai:</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Aplikacijos būsenos užkrovimas</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Naudotojo registracija ir/arba prisijungimas</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Balanso papildymas</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Coinflip, dice, roulette, slots, blackjack, crash, mines ir plinko žaidimų vykdymas</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Profilio, nustatymų, misijų, pasiekimų ir pranešimų peržiūra</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">TODO: jei dėstytojas reikalauja, įrašyti tikslų rankinių scenarijų vykdymo eiliškumą, ekrano nuotraukas arba laikus.</w:t></w:r></w:p>
+<w:p/>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t xml:space="preserve">b. CPU Naudojimo Matavimas</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">CPU naudojimas buvo matuojamas su Go pprof. CPU profilis buvo analizuojamas komanda: go tool pprof -top profiles/manual-cpu01.pprof</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">CPU pprof santrauka:</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Profilio trukmė: 78.82 sekundės</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Bendras CPU mėginių kiekis: 370 ms</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Daugiausiai tiesioginio CPU laiko sunaudoję įrašai: runtime.futex 160 ms (43.24%), internal/runtime/syscall/linux.Syscall6 120 ms (32.43%), runtime.write1 20 ms (5.41%), reflect.Value.IsNil 10 ms (2.70%), runtime.mallocgc 10 ms tiesiogiai / 30 ms bendrai (8.11% bendrai).</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Interpretacija: surinktuose CPU mėginiuose dominavo Go runtime ir syscall/laukimo funkcijos, o ne konkretus aplikacijos žaidimo metodas. Tai rodo, kad profiliavimo metu backend dalis daugiausia laukė OS/runtime sinchronizacijos arba I/O operacijų, o ne intensyviai naudojo CPU verslo logikoje.</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">TODO: įterpti CPU pprof flame graph ekrano nuotrauką, jei ataskaitoje reikia vizualaus įrodymo.</w:t></w:r></w:p>
+<w:p/>
+<w:p><w:pPr><w:pStyle w:val="Heading3"/></w:pPr><w:r><w:t xml:space="preserve">i. Metodų, Sunaudojančių Daugiausiai CPU Laiko, Nustatymas</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Daugiausiai CPU mėginių turėjusios funkcijos buvo runtime.futex, internal/runtime/syscall/linux.Syscall6, runtime.write1, reflect.Value.IsNil ir runtime.mallocgc. Surinktame profilyje joks individualus aplikacijos handleris nedominavo pagal CPU laiką.</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Išvada: pagal šį CPU profilį pagrindinė našumo rizika nėra vienas CPU intensyvus žaidimo skaičiavimo metodas. Labiau tikėtini ribojantys veiksniai yra užklausų kiekis, duomenų bazės pasieka, JSON serializacija ir atminties paskyrimų kiekis, kurie aiškiau matomi atminties/paskyrimų profilyje ir apkrovos testo atsako laikuose.</w:t></w:r></w:p>
+<w:p/>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t xml:space="preserve">c. Atminties Naudojimo Matavimas</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Atminties naudojimas buvo matuojamas su Go heap profiliavimu. Heap momentinė nuotrauka buvo įrašyta sustabdant backend dalį ir analizuota komanda: go tool pprof -top -inuse_space profiles/manual-mem02.pprof</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Atminties momentinės nuotraukos rezultatas (inuse_space):</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Iš viso rodoma naudojama heap atmintis: 11,823.60 kB</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- bufio.NewWriterSize: 5,137.02 kB (43.45%)</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- bufio.NewReaderSize: 4,112.02 kB (34.78%)</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- runtime.mallocgc: 2,574.56 kB (21.77%)</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Interpretacija: momentinės nuotraukos metu laikoma atmintis daugiausia buvo susijusi su buferizuotais HTTP jungčių skaitytuvais/rašytuvais ir runtime paskyrimais. Tai atitinka HTTP backend aplikaciją, veikiančią su lygiagrečiomis užklausomis.</w:t></w:r></w:p>
+<w:p/>
+<w:p><w:pPr><w:pStyle w:val="Heading3"/></w:pPr><w:r><w:t xml:space="preserve">i. Atminties Momentinės Nuotraukos Paėmimas Po Testų Arba Jų Metu</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Atminties momentinė nuotrauka buvo paimta po testavimo atvejų vykdymo, tvarkingai sustabdant backend dalį ir įrašant Go heap profilį. Ši momentinė nuotrauka yra profiles/manual-mem02.pprof failas.</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">TODO: įterpti atminties pprof grafiko/flame graph ekrano nuotrauką, jei reikia vizualaus įrodymo.</w:t></w:r></w:p>
+<w:p/>
+<w:p><w:pPr><w:pStyle w:val="Heading3"/></w:pPr><w:r><w:t xml:space="preserve">ii. Dažniausiai Paskiriamų Objektų Ir Jų Atminties Kiekio Nustatymas</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Go pprof paskyrimus dažniausiai pateikia pagal paskyrimo funkciją / iškvietimo kelią, o ne pagal Java tipo objektų klases. Paskirtos atminties apimtis buvo analizuojama komanda: go tool pprof -top -alloc_space profiles/manual-mem02.pprof</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Paskyrimų profilio rezultatas (alloc_space):</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Iš viso stebėta paskirta atmintis: 4,011.61 MB</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- main.scanAchievement: 498.11 MB tiesiogiai / 749.62 MB bendrai</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- main.(*application).ensureAchievementsTx: 435.55 MB tiesiogiai / 669.56 MB bendrai</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- github.com/jackc/pgx/v5/pgtype.scanPlanString.Scan: 309.51 MB</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- main.(*application).loadNotifications: 281.80 MB tiesiogiai / 439.82 MB bendrai</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- main.scanMission: 261.57 MB tiesiogiai / 406.58 MB bendrai</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- github.com/jackc/pgx/v5.(*Conn).getRows: 199.55 MB</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Interpretacija: didžiausias atminties paskyrimų spaudimas kilo iš pasiekimų, misijų, pranešimų ir pgx duomenų bazės eilučių nuskaitymo. Tai nebūtinai reiškia atminties nutekėjimą; alloc_space matuoja bendrą paskirtos atminties kiekį per laiką, įskaitant atmintį, kuri vėliau buvo atlaisvinta šiukšlių surinkėjo.</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Daugiausiai paskyrimų turėję aplikacijos lygio keliai: pasiekimų nuskaitymas/užkrovimas, misijų nuskaitymas/užkrovimas, pranešimų užkrovimas ir duomenų bazės nuskaitymo operacijos.</w:t></w:r></w:p>
+<w:p/>
+<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t xml:space="preserve">2. Aplikacijos Apkrovos / Streso Testavimas</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Apkrovos/streso testavimas buvo atliktas su k6, naudojant mišrų scenarijų faile loadtest/mixed.js. Scenarijus naudoja REST API ir simuliuoja naudotojus, kurie užkrauna būseną, papildo balansą, atidaro profilį ir žaidžia coinflip, dice, roulette, slots bei plinko žaidimus.</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Naudota komanda: .\tools\k6\k6-v1.7.1-windows-amd64\k6.exe run -u 1000 -d 5m --summary-export profiles/loadtest-results.json loadtest/mixed.js</w:t></w:r></w:p>
+<w:p/>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t xml:space="preserve">a. 1000 Vienu Metu Veikiančių Naudotojų Simuliavimas 5 Minutes</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">k6 testas buvo vykdomas su 1000 virtualių naudotojų 5 minutes. k6 išvestyje buvo nurodyta 1000 maksimalių VU ir 5m0s scenarijaus trukmė.</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Kad būtų išvengta vietinės Docker/Windows TCP connection-refused klaidos dėl momentinio starto šuolio, scenarijuje naudojamas realistiškas naudotojo tempas: kiekvienas virtualus naudotojas turi think time, o pirmoji užklausa turi atsitiktinį vėlinimą. Tai vis tiek simuliuoja 1000 vienu metu veikiančių naudotojų, nes vykdymo metu aktyvūs 1000 VU.</w:t></w:r></w:p>
+<w:p/>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t xml:space="preserve">b. Atsako Laikų Ir Pralaidumo Matavimas</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">k6 išmatavo atsako laikus ir pralaidumą. Rezultatai iš profiles/loadtest-results.json ir k6 konsolės išvesties:</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Iš viso HTTP užklausų: 78,709</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Nepavykusios HTTP užklausos: 0</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Patikrinimų sėkmės rodiklis: 100.00% (78,708 / 78,708 patikrinimų sėkmingi)</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Pralaidumas: 256.16 užklausų per sekundę</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Vidutinis atsako laikas: 1.29 sekundės</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Mediana: 1.00 sekundės</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- p90 atsako laikas: 2.34 sekundės</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- p95 atsako laikas: 3.06 sekundės</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Maksimalus atsako laikas: 18.74 sekundės</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Gauta duomenų: 454 MB</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Išsiųsta duomenų: 14 MB</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Interpretacija: backend dalis išliko pasiekiama 1000 naudotojų testo metu ir neturėjo nepavykusių HTTP užklausų. Pralaidumas buvo apie 256 užklausos per sekundę. Mediana buvo apie 1 sekundę, tačiau ilgosios uodegos delsa buvo didesnė: p95 apie 3.06 sekundės, o lėčiausia užklausa 18.74 sekundės.</w:t></w:r></w:p>
+<w:p/>
+<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t xml:space="preserve">Nustatyti Ribojantys Veiksniai Ir Rizikos</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- CPU profilis neparodė vieno custom aplikacijos metodo, kuris dominuotų pagal CPU laiką.</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Atminties paskyrimų spaudimas buvo sutelktas pasiekimų nuskaityme/užkrovime, misijų nuskaityme/užkrovime, pranešimų užkrovime ir pgx duomenų bazės nuskaityme.</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Apkrovos testas parodė sėkmingą pasiekiamumą su 1000 naudotojų, tačiau atsako laikai turėjo pastebimą ilgąją uodegą.</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">- Aplikacijai būtų naudinga sumažinti pasikartojantį misijų/pasiekimų/pranešimų užkrovimą, optimizuoti duomenų bazės užklausų modelius ir sumažinti nereikalingus atminties paskyrimus užklausų apdorojimo metu.</w:t></w:r></w:p>
+<w:p/>
+<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t xml:space="preserve">Išvados</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">Laboratorinio darbo tikslai Go aplikacijai buvo įgyvendinti. Backend dalis buvo profiliuojama pagal CPU ir atminties naudojimą, buvo paimta heap atminties momentinė nuotrauka, nustatytos daugiausiai atminties paskyrimų turinčios funkcijos, ir atliktas 1000 naudotojų REST apkrovos testas 5 minutes. Aplikacija apkrovos testą atlaikė be nepavykusių HTTP užklausų ir pasiekė apie 256 užklausas per sekundę. Pagrindinės tobulintinos vietos yra atminties paskyrimų kiekis pasikartojančiuose state/progress užkrovimo keliuose ir ilgosios uodegos atsako laikai esant lygiagrečiai apkrovai.</w:t></w:r></w:p>
+<w:p><w:r><w:t xml:space="preserve">TODO: pridėti pprof ir k6 ekrano nuotraukas, jei to reikalauja galutinis pateikimo formatas.</w:t></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr></w:body></w:document>
